@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boo Journal - Entry Processing Architecture</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .diagram-section {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #2d3748;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        h2 {
+            color: #4a5568;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+        
+        .mermaid {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .legend-color {
+            width: 30px;
+            height: 20px;
+            border-radius: 5px;
+        }
+        
+        .description {
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .flow-step {
+            background: #edf2f7;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .highlight {
+            color: #667eea;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎙️ Boo - Technical Architecture</h1>
+        
+        <!-- 1. New Entry Creation Flow -->
+        <div class="diagram-section">
+            <h2>1. New Entry Creation Flow (Voice Recording & Text Input)</h2>
+            <div class="description">
+                <strong>Overview:</strong> User records voice OR types text → Entry saved with auto-draft functionality → Background processing begins
+            </div>
+            
+            <div class="mermaid">
+                graph TD
+                    Input{Input Method}
+                    Input -->|Voice| StartVoice([User Clicks Record])
+                    Input -->|Text| StartText([User Types Text])
+                    
+                    StartVoice --> WS[WebSocket Connection]
+                    WS --> Record[Recording Audio<br/>State: RECORDING]
+                    Record --> Stop[User Stops Recording]
+                    Stop --> Process[State: PROCESSING]
+                    Process --> Whisper[Whisper Service<br/>Speech-to-Text]
+                    Whisper --> Trans[State: TRANSCRIBING]
+                    Trans --> RawText[Raw Text Generated]
+                    
+                    StartText --> DraftSave[Auto-Draft Save<br/>POST /api/drafts/save]
+                    DraftSave --> TextReady[Text Ready]
+                    TextReady --> RawText
+                    
+                    RawText --> API[POST /api/entries/create-and-process]
+                    API --> SmartTag[Smart Tagging Service<br/>Auto-detect patterns: question/idea/todo/decision/etc]
+                    SmartTag --> DB[(SQLite Database<br/>Save Raw Entry + Smart Tags)]
+                    
+                    DB --> BG[Background Tasks Queue]
+                    
+                    BG --> T1[Task 1: Generate Embedding]
+                    BG --> T2[Task 2: Memory Extraction] 
+                    BG --> Q1[Queue: Enhanced Processing]
+                    BG --> Q2[Queue: Structured Processing]
+                    
+                    T1 --> BGE[BGE-small Model<br/>384 dimensions]
+                    BGE --> SaveEmb[(Save Embedding JSON)]
+                    
+                    T2 --> MemWait[Wait for Enhanced Text<br/>or use Raw Text as fallback]
+                    MemWait --> MemExtract[Memory Service<br/>LLM Extraction]
+                    MemExtract --> MemLLM[Extract Memories with LLM<br/>Facts, Preferences, Habits]
+                    MemLLM --> MemStore[Store Memories]
+                    MemStore --> MemFallback{LLM Extracted Any?}
+                    MemFallback -->|No| RuleBased[Rule-based Fallback]
+                    MemFallback -->|Yes| MemComplete[Memory Extraction Complete]
+                    RuleBased --> MemComplete
+                    
+                    Q1 --> Worker1[Processing Worker]
+                    Worker1 --> Ollama1[Ollama LLM<br/>Enhanced Prompt]
+                    Ollama1 --> Enhanced[Enhanced Text]
+                    Enhanced --> SaveEnh[(Update Entry<br/>enhanced_text)]
+                    SaveEnh --> MoodTrigger[Trigger Mood Analysis]
+                    MoodTrigger --> MoodLLM[Ollama Mood Detection]
+                    MoodLLM --> SaveMood[(Save Mood Tags)]
+                    
+                    Q2 --> Worker2[Processing Worker]
+                    Worker2 --> Ollama2[Ollama LLM<br/>Structured Prompt]
+                    Ollama2 --> Structured[Structured Summary]
+                    Structured --> SaveStr[(Update Entry<br/>structured_summary)]
+                    
+                    SaveEmb --> Complete[Entry Complete]
+                    MemComplete --> Complete
+                    SaveMood --> Complete
+                    SaveStr --> Complete
+                    
+                    Complete --> WSNotify[WebSocket Notify<br/>Processing Complete]
+                    WSNotify --> UI[UI Updates]
+                
+                    style StartVoice fill:#f9f,stroke:#333,stroke-width:4px
+                    style StartText fill:#f9f,stroke:#333,stroke-width:4px
+                    style DraftSave fill:#87ceeb,stroke:#333,stroke-width:2px
+                    style Complete fill:#9f9,stroke:#333,stroke-width:4px
+                    style Ollama1 fill:#ffd700,stroke:#333,stroke-width:2px
+                    style Ollama2 fill:#ffd700,stroke:#333,stroke-width:2px
+                    style MoodLLM fill:#ffd700,stroke:#333,stroke-width:2px
+                    style BGE fill:#87ceeb,stroke:#333,stroke-width:2px
+                    style DB fill:#dda0dd,stroke:#333,stroke-width:2px
+                    style SaveEmb fill:#dda0dd,stroke:#333,stroke-width:2px
+                    style SaveEnh fill:#dda0dd,stroke:#333,stroke-width:2px
+                    style SaveStr fill:#dda0dd,stroke:#333,stroke-width:2px
+                    style SmartTag fill:#ffd700,stroke:#333,stroke-width:2px
+                    style MemExtract fill:#ffd700,stroke:#333,stroke-width:2px
+                    style SaveMood fill:#dda0dd,stroke:#333,stroke-width:2px
+            </div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ffd700;"></div>
+                    <span>LLM Processing (Ollama)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #87ceeb;"></div>
+                    <span>Embedding Model (BGE)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #dda0dd;"></div>
+                    <span>Database Operations</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 2. Voice Upload Flow -->
+        <div class="diagram-section">
+            <h2>2. Voice File Upload Flow</h2>
+            <div class="description">
+                <strong>Overview:</strong> User uploads audio file → Whisper transcribes → Same processing pipeline as voice recording
+            </div>
+            
+            <div class="mermaid">
+                graph TD
+                    Upload([User Uploads File]) --> Validate[Validate File<br/>Formats: .wav/.mp3/.m4a/.aac/.ogg/.flac/.webm/.opus<br/>Max Size: 100MB]
+                    Validate -->|Invalid| Error[Show Error<br/>Unsupported format or too large]
+                    Validate -->|Valid| API[POST /api/audio/transcribe]
+                    
+                    API --> TempDir[Create Temporary Directory]
+                    TempDir --> SaveFile[Save Uploaded File]
+                    SaveFile --> SizeCheck[Check Actual File Size]
+                    SizeCheck -->|Too Large| Error
+                    SizeCheck -->|OK| Convert[Convert Audio to WAV<br/>Using Librosa]
+                    
+                    Convert --> AudioProcess[Audio Processing:<br/>• Load with original sample rate<br/>• Resample to 16kHz if needed<br/>• Convert to mono float32<br/>• Save as WAV]
+                    AudioProcess --> Metadata[Extract Metadata:<br/>Duration, Sample Rate, Format]
+                    
+                    Metadata --> Whisper[Whisper Service<br/>Transcribe WAV File]
+                    Whisper --> TransResult[Transcription Result<br/>+ Duration + Confidence + Language]
+                    
+                    TransResult --> Return[Return JSON Response<br/>with transcription & metadata]
+                    Return --> Display[Display in UI<br/>Allow User Editing]
+                    Display --> UserEdit[User Edits Text<br/>Optional]
+                    UserEdit --> Save[User Saves Entry]
+                    
+                    Save --> Create[POST /api/entries/create-and-process]
+                    Create --> SmartTagging[Smart Tagging Service]
+                    SmartTagging --> Same[Same Pipeline as<br/>New Entry Creation]
+                    
+                    style Upload fill:#f9f,stroke:#333,stroke-width:4px
+                    style Convert fill:#87ceeb,stroke:#333,stroke-width:2px
+                    style Whisper fill:#87ceeb,stroke:#333,stroke-width:2px
+                    style SmartTagging fill:#ffd700,stroke:#333,stroke-width:2px
+                    style Same fill:#90ee90,stroke:#333,stroke-width:2px
+            </div>
+        </div>
+        
+        <!-- 3. Talk to Your Diary Flow -->
+        <div class="diagram-section">
+            <h2>3. Talk to Boo (Chat Agent) Flow</h2>
+            <div class="description">
+                <strong>Overview:</strong> Two-phase process: 1) Tool-calling for search, 2) Response generation with context
+            </div>
+            
+            <div class="mermaid">
+                graph TD
+                    Start([User Message]) --> API[POST /api/diary/chat]
+                    API --> Service[DiaryChatService]
+                    
+                    Service --> Phase1[Phase 1: Tool Selection]
+                    Phase1 --> Ollama1[ChatOllama with Tools<br/>Model: qwen3:8b]
+                    
+                    Ollama1 --> Tools{Which Tool?}
+                    
+                    Tools -->|Content Search| T1[search_diary_entries]
+                    T1 --> Embed[Generate Query Embedding<br/>BGE-small]
+                    Embed --> Sim[Cosine Similarity Search]
+                    Sim --> Entries[(Find Similar Entries)]
+                    
+                    Tools -->|Date Search| T2[get_entries_by_date]
+                    T2 --> DateQ[Date Range Query]
+                    DateQ --> DateEntries[(Find Date Entries)]
+                    
+                    Tools -->|Ideas| T3[extract_ideas_and_concepts]
+                    T3 --> IdeaQ[Search for Ideas/Concepts]
+                    IdeaQ --> IdeaEntries[(Find Idea Entries)]
+                    
+                    Tools -->|Actions| T4[extract_action_items]
+                    T4 --> TodoQ[Search for TODOs]
+                    TodoQ --> TodoEntries[(Find Action Items)]
+                    
+                    Tools -->|Time Summary| T5[summarize_time_period]
+                    T5 --> TimeQ[Time Period Query]
+                    TimeQ --> TimeEntries[(Find Period Entries)]
+                    
+                    Tools -->|Context| T6[get_context_before_after]
+                    T6 --> ContextQ[Context Window Query]
+                    ContextQ --> ContextEntries[(Find Context)]
+                    
+                    Tools -->|Add Entry| T7[add_entry_to_diary]
+                    T7 --> AddEntry[(Create New Entry)]
+                    AddEntry --> Pipeline[Full Processing Pipeline]
+                    
+                    Tools -->|Conversations| T8[search_conversations]
+                    T8 --> ConvQ[Search Past Chats]
+                    ConvQ --> ConvEntries[(Find Conversations)]
+                    
+                    Entries --> Results[Tool Results]
+                    DateEntries --> Results
+                    IdeaEntries --> Results
+                    TodoEntries --> Results
+                    TimeEntries --> Results
+                    ContextEntries --> Results
+                    Pipeline --> Results
+                    ConvEntries --> Results
+                    
+                    Results --> Phase2[Phase 2: Response Generation]
+                    Phase2 --> MemoryRetrieval[Retrieve Relevant Memories<br/>Based on User Query]
+                    MemoryRetrieval --> UserInfo[Get User Information<br/>Name, Display Settings]
+                    UserInfo --> Context[Build Context:<br/>- Tool Results<br/>- Conversation History<br/>- System Date<br/>- Relevant Memories<br/>- User Name]
+                    
+                    Context --> Ollama2[ChatOllama Generate<br/>Model: qwen3:8b<br/>With Memory & User Context]
+                    Ollama2 --> Response[AI Response]
+                    
+                    Response --> Clean[Strip Thinking Blocks<br/>Clean Formatting]
+                    Clean --> Final[Final Response]
+                    
+                    Final --> Check{Voice Enabled?}
+                    Check -->|Yes| TTS[TTS Service<br/>Piper Engine]
+                    TTS --> Audio[Audio Stream]
+                    Audio --> Client[Return to Client]
+                    
+                    Check -->|No| Client
+                    
+                    style Start fill:#f9f,stroke:#333,stroke-width:4px
+                    style Ollama1 fill:#ffd700,stroke:#333,stroke-width:2px
+                    style Ollama2 fill:#ffd700,stroke:#333,stroke-width:2px
+                    style Embed fill:#87ceeb,stroke:#333,stroke-width:2px
+                    style TTS fill:#90ee90,stroke:#333,stroke-width:2px
+            </div>
+            
+            <div class="description">
+                <strong>Available Tools:</strong>
+                <ul>
+                    <li><span class="highlight">search_diary_entries</span>: Semantic search using embeddings</li>
+                    <li><span class="highlight">get_entries_by_date</span>: Date-specific queries</li>
+                    <li><span class="highlight">extract_ideas_and_concepts</span>: Find ideas and insights</li>
+                    <li><span class="highlight">extract_action_items</span>: Find TODOs and tasks</li>
+                    <li><span class="highlight">summarize_time_period</span>: Summarize a time range</li>
+                    <li><span class="highlight">get_context_before_after</span>: Get surrounding entries</li>
+                    <li><span class="highlight">add_entry_to_diary</span>: Create new entry from chat</li>
+                    <li><span class="highlight">search_conversations</span>: Search past conversations</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- 4. Memory System Flow -->
+        <div class="diagram-section">
+            <h2>4. Memory Extraction & Management System</h2>
+            <div class="description">
+                <strong>Overview:</strong> Memories extracted from entries/conversations → Categorized → User can rate accuracy
+            </div>
+            
+            <div class="mermaid">
+                graph TD
+                    Source{Source Type} -->|Entry| Entry[Enhanced Text Available]
+                    Source -->|Conversation| Conv[Conversation Saved]
+                    
+                    Entry --> Extract1[Memory Service]
+                    Conv --> Extract2[Memory Service]
+                    
+                    Extract1 --> LLM[Ollama LLM<br/>Memory Extraction Prompt]
+                    Extract2 --> LLM
+                    
+                    LLM --> Parse[Parse LLM Response<br/>JSON Format]
+                    Parse --> Validate[Validate & Deduplicate<br/>Check Recent 50 Memories]
+                    
+                    Validate --> Cat{Categorize}
+                    Cat -->|Type 1| Fact[Personal Facts<br/>Name, Job, Location]
+                    Cat -->|Type 2| Pref[Preferences<br/>Likes, Dislikes, Style]
+                    Cat -->|Type 3| Habit[Habits/Patterns<br/>Routines, Behaviors]
+                    
+                    Fact --> ConfidenceScore[LLM Assigns Confidence<br/>0.0 - 1.0 based on clarity]
+                    Pref --> ConfidenceScore
+                    Habit --> ConfidenceScore
+                    
+                    ConfidenceScore --> ImportanceCalc[Calculate Importance Score<br/>Confidence × 10 = 1-10 Scale]
+                    ImportanceCalc --> OllamaScore[Optional: Ollama LLM<br/>Refine Importance Score 1-10]
+                    OllamaScore --> Store[(Store in DB<br/>agent_memories table<br/>importance_score 1-10)]
+                    
+                    Store --> Display[Display to User<br/>Memory Review UI]
+                    Display --> Rate{User Rating}
+                    
+                    Rate -->|-3 to -1| Irrelevant[Subtract 3 to 1 from importance]
+                    Rate -->|0| Neutral[No adjustment]
+                    Rate -->|+1 to +3| Important[Add 1 to 3 to importance]
+                    
+                    Irrelevant --> Update[(Update Memory)]
+                    Neutral --> Update
+                    Important --> Update
+                    
+                    Update --> Future[Available for<br/>Future Chats]
+                    
+                    Future --> Retrieve[Retrieved During Chat<br/>Based on Relevance]
+                    Retrieve --> Context[Added to Chat Context<br/>Top 10 Relevant]
+                    
+                    style LLM fill:#ffd700,stroke:#333,stroke-width:2px
+                    style OllamaScore fill:#ffd700,stroke:#333,stroke-width:2px
+                    style Store fill:#dda0dd,stroke:#333,stroke-width:2px
+                    style Update fill:#dda0dd,stroke:#333,stroke-width:2px
+            </div>
+            
+            <div class="description">
+                <strong>Memory Lifecycle:</strong>
+                <ol>
+                    <li>Extraction triggered after enhanced text is ready</li>
+                    <li>LLM identifies facts, preferences, and habits</li>
+                    <li>Deduplication against recent memories</li>
+                    <li>Importance scoring (1-10 scale from confidence × 10)</li>
+                    <li>User can adjust importance (-3 to +3 points)</li>
+                    <li>User-adjusted memories have different decay rates</li>
+                    <li>Access count tracked for relevance</li>
+                </ol>
+            </div>
+        </div>
+        
+        <!-- 5. Processing Queue Architecture -->
+        <div class="diagram-section">
+            <h2>5. Background Processing Queue System</h2>
+            <div class="description">
+                <strong>Overview:</strong> Async job queue with retry logic and status notifications
+            </div>
+            
+            <div class="mermaid">
+                graph TD
+                    Job[New Processing Job] --> Queue[Job Queue<br/>deque structure]
+                    Queue --> Worker[Worker Loop<br/>Async Processing]
+                    
+                    Worker --> Check{Job Status}
+                    Check -->|Pending| Process[Process Job]
+                    Check -->|Processing| Skip[Skip]
+                    Check -->|Complete| Remove[Remove from Queue]
+                    
+                    Process --> GetEntry[Get Entry from Database]
+                    GetEntry --> Mode{Processing Mode}
+                    Mode -->|Enhanced| EnhServ[EntryProcessingService<br/>Enhanced Mode]
+                    Mode -->|Structured| StrServ[EntryProcessingService<br/>Structured Mode]
+                    
+                    EnhServ --> EnhOllama[Ollama Generate<br/>Enhanced Prompt]
+                    StrServ --> StrOllama[Ollama Generate<br/>Structured Prompt]
+                    
+                    EnhOllama --> EnhResult[Enhanced Text Result]
+                    StrOllama --> StrResult[Structured Result]
+                    
+                    EnhResult --> UpdateEnh[Update Entry.enhanced_text<br/>+ processing_metadata]
+                    StrResult --> UpdateStr[Update Entry.structured_summary<br/>+ processing_metadata]
+                    
+                    UpdateEnh --> MemoryCheck{Enhanced Mode?}
+                    UpdateStr --> SaveSuccess[Save to Database]
+                    
+                    MemoryCheck -->|Yes| ExtractMem[Extract Memories<br/>from Enhanced Text]
+                    MemoryCheck -->|No| SaveSuccess
+                    ExtractMem --> SaveSuccess
+                    
+                    SaveSuccess --> Success{Success?}
+                    
+                    Success -->|Yes| Complete[Mark Job Complete<br/>Set completed_at]
+                    Success -->|No| Retry{Retry Count ≤ 3?}
+                    
+                    Retry -->|Yes| Backoff[Exponential Backoff<br/>2^retry_count seconds]
+                    Backoff --> Requeue[Requeue Job<br/>Status: PENDING]
+                    Retry -->|No| Failed[Mark Job Failed<br/>Max Retries Reached]
+                    
+                    Complete --> NotifySuccess[WebSocket Notification<br/>Job Complete]
+                    Failed --> NotifyFail[WebSocket Notification<br/>Job Failed]
+                    
+                    NotifySuccess --> UI[UI Updates]
+                    NotifyFail --> UI
+                    
+                    Requeue --> Queue
+                    
+                    style Queue fill:#87ceeb,stroke:#333,stroke-width:2px
+                    style EnhOllama fill:#ffd700,stroke:#333,stroke-width:2px
+                    style StrOllama fill:#ffd700,stroke:#333,stroke-width:2px
+                    style UpdateEnh fill:#dda0dd,stroke:#333,stroke-width:2px
+                    style UpdateStr fill:#dda0dd,stroke:#333,stroke-width:2px
+                    style ExtractMem fill:#90ee90,stroke:#333,stroke-width:2px
+            </div>
+        </div>
+        
+        <!-- 6. Pattern Insights & Mood Analysis -->
+        <div class="diagram-section">
+            <h2>6. Pattern Insights & Mood Analysis System</h2>
+            <div class="description">
+                <strong>Overview:</strong> Advanced analysis available for all users - pattern detection across time periods and mood analysis for emotional insights
+            </div>
+            
+            <div class="mermaid">
+                graph TD
+                    Trigger{Analysis Trigger}
+                    Trigger -->|User Requests Analysis| PatternAnalyze[POST /api/patterns/analyze<br/>Trigger Pattern Detection]
+                    Trigger -->|Enhanced Text Available| MoodAnalysis[Mood Analysis Trigger<br/>POST /api/entries/analyze-mood]
+                    PatternAnalyze --> PatternService[Pattern Detector Service]
+                    PatternService --> PatternLLM[Analyze Entry Corpus<br/>Detect patterns across time]
+                    PatternLLM --> PatternTypes{Pattern Categories}
+                    
+                    PatternTypes -->|Mood| MoodPatterns[Mood Patterns<br/>Emotional cycles and triggers]
+                    PatternTypes -->|Topic| TopicPatterns[Topic Patterns<br/>Recurring themes and interests]
+                    PatternTypes -->|Behavior| BehaviorPatterns[Behavior Patterns<br/>Habits and routine changes]
+                    PatternTypes -->|Temporal| TemporalPatterns[Temporal Patterns<br/>Time-based correlations]
+                    
+                    MoodPatterns --> PatternStore[(Store in patterns table<br/>with confidence and frequency)]
+                    TopicPatterns --> PatternStore
+                    BehaviorPatterns --> PatternStore
+                    TemporalPatterns --> PatternStore
+                    
+                    PatternStore --> PatternUI[Pattern Insights UI<br/>Diamond icon in sidebar]
+                    
+                    MoodAnalysis --> MoodService[Mood Analysis Service]
+                    MoodService --> MoodLLM[Ollama LLM<br/>Mood Detection Prompt]
+                    MoodLLM --> MoodParse[Parse JSON Response<br/>Extract 1-5 mood tags]
+                    MoodParse --> MoodValidate[Validate Mood Vocabulary<br/>happy/stressed/excited/etc]
+                    MoodValidate --> MoodSave[(Update Entry<br/>mood_tags column)]
+                    
+                    MoodSave --> MoodTrends[Mood Trend Analysis<br/>Available in UI]
+                    
+                    PatternUI --> Insights[User Views Insights<br/>Patterns and Correlations]
+                    MoodTrends --> Insights
+                    
+                    style PatternLLM fill:#ffd700,stroke:#333,stroke-width:2px
+                    style MoodLLM fill:#ffd700,stroke:#333,stroke-width:2px
+                    style PatternStore fill:#dda0dd,stroke:#333,stroke-width:2px
+                    style MoodSave fill:#dda0dd,stroke:#333,stroke-width:2px
+                    style PatternUI fill:#90ee90,stroke:#333,stroke-width:2px
+                    style Insights fill:#90ee90,stroke:#333,stroke-width:2px
+            </div>
+            
+            <div class="description">
+                <strong>Pattern Detection Features:</strong>
+                <ul>
+                    <li><span class="highlight">Four Pattern Types</span>: Mood, Topic, Behavior, and Temporal patterns</li>
+                    <li><span class="highlight">Confidence Scoring</span>: Statistical confidence for detected patterns</li>
+                    <li><span class="highlight">Entry Correlation</span>: Links patterns to specific journal entries</li>
+                    <li><span class="highlight">Mood Analysis</span>: Real-time emotional tagging with 1-5 mood tags per entry</li>
+                    <li><span class="highlight">Trend Visualization</span>: Mood and pattern trends over time</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- 7. Embedding & Hybrid Search System -->
+        <div class="diagram-section">
+            <h2>7. Embedding Generation & Hybrid Search System</h2>
+            <div class="description">
+                <strong>Overview:</strong> BGE-small model for embeddings → Hybrid search combining semantic similarity with keyword matching power-ups
+            </div>
+            
+            <div class="mermaid">
+                graph TD
+                    Text[Input Text] --> Type{Text Type}
+                    Type -->|Document| DocFormat[No special prefix for documents]
+                    Type -->|Query| QueryFormat[Add 'Represent this sentence for searching relevant passages:' prefix]
+                    
+                    DocFormat --> BGE[BGE-small-en-v1.5<br/>SentenceTransformer]
+                    QueryFormat --> BGE
+                    
+                    BGE --> Vector[384-dimension vector]
+                    Vector --> Norm[L2 Normalization]
+                    Norm --> Store[(Store as JSON<br/>in embeddings column)]
+                    
+                    Search[Search Query] --> QueryEmb[Generate Query Embedding]
+                    QueryEmb --> Load[Load All Entry Embeddings]
+                    Load --> Cosine[Cosine Similarity<br/>numpy.dot product]
+                    Cosine --> Sort[Sort by Score]
+                    Sort --> Filter[Apply Threshold<br/>Default: 0.3]
+                    Filter --> Candidates[Get 2x Candidates<br/>for Hybrid Reranking]
+                    
+                    Candidates --> HybridSearch[Hybrid Search Service]
+                    HybridSearch --> ExactMatch{Exact Match Found?}
+                    HybridSearch --> PartialMatch{Partial Words Match?}
+                    
+                    ExactMatch -->|Yes| ExactBoost[+0.2 Boost<br/>Whole query in text]
+                    ExactMatch -->|No| CheckPartial[Check Word Overlap]
+                    
+                    CheckPartial --> PartialMatch
+                    PartialMatch -->|Yes| PartialBoost[+0.1 × Match Ratio<br/>Based on word overlap]
+                    PartialMatch -->|No| NoBoost[No Text Boost]
+                    
+                    ExactBoost --> Combine[Combine Scores<br/>Semantic + Text Boosts]
+                    PartialBoost --> Combine
+                    NoBoost --> Combine
+                    
+                    Combine --> Cap[Cap Final Score at 1.0]
+                    Cap --> Rerank[Rerank by Hybrid Score]
+                    Rerank --> Context[Extract Search Context<br/>Around Keyword Matches]
+                    Context --> FinalResults[Top K Results<br/>with Enhanced Scoring]
+                    
+                    FinalResults --> Return[Return to User]
+                    
+                    style BGE fill:#87ceeb,stroke:#333,stroke-width:2px
+                    style Store fill:#dda0dd,stroke:#333,stroke-width:2px
+                    style HybridSearch fill:#ffd700,stroke:#333,stroke-width:2px
+                    style ExactBoost fill:#90ee90,stroke:#333,stroke-width:2px
+                    style PartialBoost fill:#90ee90,stroke:#333,stroke-width:2px
+            </div>
+            
+            <div class="description">
+                <strong>Hybrid Search Features:</strong>
+                <ul>
+                    <li><span class="highlight">Semantic Similarity</span>: Base BGE embedding cosine similarity</li>
+                    <li><span class="highlight">Exact Match Boost</span>: +20% for entries containing the full query</li>
+                    <li><span class="highlight">Partial Match Boost</span>: +10% × (matched words / total query words)</li>
+                    <li><span class="highlight">Context Extraction</span>: Smart snippets around keyword matches</li>
+                    <li><span class="highlight">Score Capping</span>: Final scores capped at 100% (1.0) for consistency</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#667eea',
+                primaryTextColor: '#fff',
+                primaryBorderColor: '#7c3aed',
+                lineColor: '#5c6ac4',
+                secondaryColor: '#006100',
+                tertiaryColor: '#fff'
+            },
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+    </script>
+</body>
+</html>
