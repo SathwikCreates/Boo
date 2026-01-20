@@ -23,9 +23,6 @@ It’s not just storage – it’s your personal AI that remembers and connects 
 
 
 
-![ezgif-4410f834a9fa50](https://github.com/user-attachments/assets/61c0425b-e89a-44fb-a2e5-9a04f250da22)
-
-
 
 ## What is Boo?
 
