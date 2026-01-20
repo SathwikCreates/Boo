@@ -6,12 +6,12 @@ import { Badge } from '@/components/ui/badge'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { 
-  ChevronDown, 
-  ChevronUp, 
-  FileText, 
-  Pen, 
-  BookOpen, 
+import {
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  Pen,
+  BookOpen,
   Search,
   Filter,
   Calendar,
@@ -28,21 +28,12 @@ import {
   Save,
   CheckCircle
 } from 'lucide-react'
-import { api } from '@/lib/api'
+import { api, type Entry } from '@/lib/api'
 import { useLocation } from 'react-router-dom'
 
 // Types for entry data
-interface Entry {
-  id: number
-  raw_text: string
-  enhanced_text?: string
-  structured_summary?: string
-  mode: string
-  timestamp: string
-  word_count: number
-  processing_metadata?: any
-  mood_tags?: string[]
-}
+// Types for entry data
+// Entry imported from @/lib/api
 
 // View modes for entry display
 const viewModes = [
@@ -58,7 +49,7 @@ const viewModes = [
   {
     key: 'enhanced',
     icon: Pen,
-    title: "Enhanced Style", 
+    title: "Enhanced Style",
     description: "Improved grammar and tone while preserving your intent",
     gradient: "from-purple-500 to-pink-500",
     bgColor: "bg-purple-500/10",
@@ -68,7 +59,7 @@ const viewModes = [
     key: 'structured',
     icon: BookOpen,
     title: "Structured Summary",
-    description: "Organized into coherent themes and key points", 
+    description: "Organized into coherent themes and key points",
     gradient: "from-emerald-500 to-teal-500",
     bgColor: "bg-emerald-500/10",
     borderColor: "border-emerald-500/20"
@@ -85,7 +76,7 @@ function ViewEntriesPage() {
     const positiveModds = ['happy', 'excited', 'grateful', 'content', 'peaceful', 'confident', 'proud', 'hopeful', 'inspired', 'loved', 'optimistic']
     const negativeModds = ['sad', 'angry', 'frustrated', 'anxious', 'stressed', 'worried', 'disappointed', 'lonely', 'scared', 'overwhelmed']
     const neutralModds = ['tired', 'calm', 'surprised', 'confused', 'bored', 'curious', 'focused']
-    
+
     if (positiveModds.includes(mood.toLowerCase())) {
       return 'from-green-400 to-emerald-500'
     } else if (negativeModds.includes(mood.toLowerCase())) {
@@ -105,7 +96,7 @@ function ViewEntriesPage() {
     }
     return emojiMap[mood.toLowerCase()] || '💭'
   }
-  
+
   const [expandedDropdowns, setExpandedDropdowns] = useState<Set<number>>(new Set())
   const [selectedVersion, setSelectedVersion] = useState<'raw' | 'enhanced' | 'structured'>('enhanced')
   const [loading, setLoading] = useState(true)
@@ -146,11 +137,11 @@ function ViewEntriesPage() {
   // Handle auto-selection when navigating from other pages (like pattern modals)
   useEffect(() => {
     const selectedEntryId = location.state?.selectedEntryId
-    
+
     if (selectedEntryId) {
       // Clear navigation state immediately to prevent duplicate runs
       window.history.replaceState({}, document.title)
-      
+
       // Check if entry is in current loaded entries first
       if (entries.length > 0) {
         const entryToSelect = entries.find(entry => entry.id === selectedEntryId)
@@ -159,7 +150,7 @@ function ViewEntriesPage() {
           return
         }
       }
-      
+
       // Entry not in current page or no entries loaded yet, fetch directly
       const fetchSelectedEntry = async () => {
         try {
@@ -178,17 +169,17 @@ function ViewEntriesPage() {
   // Handle preview mode from homepage cards
   useEffect(() => {
     const previewMode = location.state?.previewMode
-    
+
     if (previewMode && entries.length > 0) {
       // Set the selected version to match the clicked mode
       setSelectedVersion(previewMode as 'raw' | 'enhanced' | 'structured')
-      
+
       // Auto-select the latest entry for preview
       const latestEntry = entries[0] // entries are sorted by timestamp desc
       if (latestEntry) {
         setSelectedEntry(latestEntry)
       }
-      
+
       // Clear navigation state
       window.history.replaceState({}, document.title)
     }
@@ -211,7 +202,7 @@ function ViewEntriesPage() {
       performSemanticSearch(searchQuery)
     }
   }
-  
+
   // Handle search button click
   const handleSearchClick = () => {
     performSemanticSearch(searchQuery)
@@ -220,7 +211,7 @@ function ViewEntriesPage() {
   // Test embedding similarity function
   const testEmbeddingSimilarity = async (query: string) => {
     console.log(`🧪 TESTING EMBEDDING SIMILARITY for query: "${query}"`)
-    
+
     try {
       // First, let's check if embeddings were really regenerated with BGE
       const dbStateResponse = await api.debugDatabaseState()
@@ -228,32 +219,32 @@ function ViewEntriesPage() {
         const dbData = dbStateResponse.data.data || dbStateResponse.data
         console.log(`📊 Database has ${dbData.entries_with_embeddings} entries with embeddings`)
       }
-      
+
       // Perform semantic search
       const searchResponse = await api.semanticSearch(query, 10, 0.1) // Lower threshold to see more results
-      
+
       if (searchResponse.success && searchResponse.data) {
         const searchData = searchResponse.data.data || searchResponse.data
         const results = searchData.results || []
-        
+
         console.log(`\n🔍 SEARCH RESULTS for "${query}": Found ${results.length} matches`)
         console.log('Total searchable entries:', searchData.total_searchable_entries)
-        
+
         results.forEach((result: any, index: number) => {
           console.log(`\n${index + 1}. Entry ${result.entry_id} - Similarity: ${(result.similarity * 100).toFixed(2)}%`)
           console.log(`   Title: ${result.title}`)
           console.log(`   Content: ${result.content.substring(0, 150)}...`)
         })
-        
+
         // Also show what SHOULD match
         console.log(`\n📝 EXPECTED MATCHES for "${query}":`)
         console.log('- Look for entries mentioning hiking, mountains, trails, nature, walking, etc.')
         console.log('- The Raj/soccer entry should have LOW similarity for "hiking"')
-        
+
       } else {
         console.error('Search failed:', searchResponse.error)
       }
-      
+
     } catch (error) {
       console.error('Test failed:', error)
     }
@@ -262,17 +253,17 @@ function ViewEntriesPage() {
   // Debug function - temporary
   const debugEmbeddings = async () => {
     console.log('🔧 DEBUG: Enhanced BGE Embedding Analysis...')
-    
+
     try {
       // Get all entries by fetching multiple pages
       let allEntries = []
       let currentPage = 1
       let hasMorePages = true
-      
+
       while (hasMorePages && currentPage <= 10) { // Limit to 10 pages max
         console.log(`Fetching page ${currentPage}...`)
         const response = await api.getEntries(currentPage, 50)
-        
+
         if (response.success && response.data) {
           allEntries.push(...response.data.entries)
           hasMorePages = response.data.has_next
@@ -281,16 +272,16 @@ function ViewEntriesPage() {
           hasMorePages = false
         }
       }
-      
+
       console.log(`Total entries fetched: ${allEntries.length}`)
-      
+
       // Search for Raj in all entries
-      const rajEntries = allEntries.filter(entry => 
+      const rajEntries = allEntries.filter(entry =>
         entry.raw_text.toLowerCase().includes('raj') ||
         entry.enhanced_text?.toLowerCase().includes('raj') ||
         entry.structured_summary?.toLowerCase().includes('raj')
       )
-      
+
       console.log('📋 ENTRIES CONTAINING "RAJ":')
       rajEntries.forEach((entry, index) => {
         console.log(`\n--- Entry ${index + 1} (ID: ${entry.id}) ---`)
@@ -298,7 +289,7 @@ function ViewEntriesPage() {
         console.log('Enhanced:', entry.enhanced_text || 'N/A')
         console.log('Structured:', entry.structured_summary || 'N/A')
         console.log('Has embeddings:', entry.embeddings && entry.embeddings.length > 0 ? `Yes (${entry.embeddings.length}D)` : 'No')
-        
+
         // Check which text would be used for embedding (priority order)
         let selectedText = 'None'
         if (entry.structured_summary && entry.structured_summary.trim()) {
@@ -310,37 +301,37 @@ function ViewEntriesPage() {
         }
         console.log('Text used for embedding:', selectedText)
       })
-      
+
       // Test semantic search for "Raj" and show detailed results
       console.log('\n🔍 TESTING SEMANTIC SEARCH FOR "RAJ":')
       const searchResponse = await api.semanticSearch('Raj', 10, 0.1)
-      
+
       if (searchResponse.success && searchResponse.data) {
         const results = searchResponse.data.results || []
         console.log(`Found ${results.length} semantic matches:`)
-        
-        results.forEach((result, index) => {
+
+        results.forEach((result: any, index: number) => {
           console.log(`\nMatch ${index + 1}:`)
           console.log('- Entry ID:', result.entry_id)
           console.log('- Similarity:', `${(result.similarity * 100).toFixed(2)}%`)
           console.log('- Title:', result.title)
           console.log('- Content Preview:', result.content.substring(0, 100) + '...')
-          
+
           // Find the full entry details
           const fullEntry = allEntries.find(e => e.id === result.entry_id)
           if (fullEntry) {
-            const containsRaj = 
+            const containsRaj =
               fullEntry.raw_text.toLowerCase().includes('raj') ||
               fullEntry.enhanced_text?.toLowerCase().includes('raj') ||
               fullEntry.structured_summary?.toLowerCase().includes('raj')
             console.log('- Actually contains "Raj":', containsRaj ? '✅ YES' : '❌ NO')
           }
         })
-        
+
         // Check if any Raj entries are missing from results
-        const resultEntryIds = results.map(r => r.entry_id)
+        const resultEntryIds = results.map((r: any) => r.entry_id)
         const missingRajEntries = rajEntries.filter(entry => !resultEntryIds.includes(entry.id))
-        
+
         if (missingRajEntries.length > 0) {
           console.log('\n⚠️ RAJ ENTRIES NOT IN SEARCH RESULTS:')
           missingRajEntries.forEach(entry => {
@@ -350,19 +341,19 @@ function ViewEntriesPage() {
       } else {
         console.error('Semantic search failed:', searchResponse.error)
       }
-      
+
       if (rajEntries.length === 0) {
         console.log('❌ NO ENTRIES FOUND containing "Raj"')
         console.log('🔍 Double-check: Are you sure there is an entry with "Raj"?')
       } else {
         console.log(`✅ FOUND ${rajEntries.length} entries containing "Raj":`)
-        
+
         rajEntries.forEach(entry => {
           const hasEmbeddings = entry.embeddings && entry.embeddings.length > 0
           const rawContainsRaj = entry.raw_text.toLowerCase().includes('raj')
           const enhancedContainsRaj = entry.enhanced_text?.toLowerCase().includes('raj')
           const structuredContainsRaj = entry.structured_summary?.toLowerCase().includes('raj')
-          
+
           console.log(`\n📝 Entry ${entry.id}: ${hasEmbeddings ? '✅ INDEXED' : '❌ NO EMBEDDINGS'}`)
           console.log(`Raw contains "Raj": ${rawContainsRaj}`)
           console.log(`Enhanced contains "Raj": ${enhancedContainsRaj}`)
@@ -373,7 +364,7 @@ function ViewEntriesPage() {
           console.log('---')
         })
       }
-      
+
     } catch (error) {
       console.error('Debug search failed:', error)
     }
@@ -382,10 +373,10 @@ function ViewEntriesPage() {
   // Regenerate all embeddings with BGE improvements
   const regenerateAllEmbeddings = async () => {
     console.log('🔄 Starting complete embedding regeneration with BGE improvements...')
-    
+
     try {
       const response = await api.regenerateAllEmbeddings()
-      
+
       if (response.success) {
         console.log('✅ Regeneration started successfully!')
         console.log('📝 Status:', response.data?.message)
@@ -396,40 +387,40 @@ function ViewEntriesPage() {
         console.log('  • Text prioritization (structured > enhanced > raw)')
         console.log('  • Improved semantic search quality')
         console.log('\n📊 Monitoring progress...')
-        
+
         // Set regenerating state to show processing badges
         setIsRegenerating(true)
-        
+
         // Poll for status updates
         const pollStatus = async () => {
           try {
             const statusResponse = await api.getRegenerationStatus()
             if (statusResponse.success && statusResponse.data) {
               const status = statusResponse.data
-              
+
               if (status.is_running) {
                 console.log(`🔄 Progress: ${status.progress}/${status.total} (${status.percentage}%) - ${status.current_step}`)
-                
+
                 // Show recent logs
                 if (status.logs && status.logs.length > 0) {
                   const recentLogs = status.logs.slice(-5) // Show last 5 logs
                   recentLogs.forEach((log: string) => console.log(`  ${log}`))
                 }
-                
+
                 // Continue polling every 2 seconds
                 setTimeout(pollStatus, 2000)
               } else {
                 console.log('🎉 Regeneration completed!')
                 console.log('📊 Final status:')
                 console.log(`Progress: ${status.progress}/${status.total}`)
-                
+
                 if (status.logs && status.logs.length > 0) {
                   console.log('\n📜 REGENERATION LOGS:')
                   status.logs.forEach((log: string) => console.log(log))
                 } else {
                   console.log('⚠️ No logs available from regeneration process')
                 }
-                
+
                 // Clear regenerating state and refresh entries
                 setIsRegenerating(false)
                 console.log('🔄 Refreshing entries list...')
@@ -440,14 +431,14 @@ function ViewEntriesPage() {
             console.error('❌ Status polling failed:', error)
           }
         }
-        
+
         // Start polling after a short delay
         setTimeout(pollStatus, 1000)
-        
+
       } else {
         console.error('❌ Regeneration failed:', response.error)
       }
-      
+
     } catch (error) {
       console.error('❌ Regeneration request failed:', error)
     }
@@ -456,19 +447,19 @@ function ViewEntriesPage() {
   // Database state debug function
   const debugDatabaseState = async () => {
     console.log('🗄️ DEBUG: Checking database state...')
-    
+
     try {
       const response = await api.debugDatabaseState()
-      
+
       if (response.success && response.data) {
         // The actual data is nested inside response.data.data due to SuccessResponse wrapper
         const data = response.data.data || response.data
-        
+
         console.log('📊 DATABASE STATE:')
         console.log(`Total entries: ${data.total_entries}`)
         console.log(`Entries with embeddings: ${data.entries_with_embeddings}`)
         console.log(`Entries without embeddings: ${data.entries_without_embeddings}`)
-        
+
         // Check regeneration status
         if (data.regeneration_status) {
           console.log('\n🔄 REGENERATION STATUS:')
@@ -476,7 +467,7 @@ function ViewEntriesPage() {
           console.log(`Progress: ${data.regeneration_status.progress}/${data.regeneration_status.total}`)
           console.log(`Current step: ${data.regeneration_status.current_step}`)
         }
-        
+
         // Show Raj entries if found
         if (data.raj_entries && data.raj_entries.length > 0) {
           console.log(`\n📌 ENTRIES CONTAINING "RAJ": ${data.raj_entries_found}`)
@@ -496,7 +487,7 @@ function ViewEntriesPage() {
         } else {
           console.log('\n⚠️ No entries containing "Raj" found in database')
         }
-        
+
         if (data.sample_entries && data.sample_entries.length > 0) {
           console.log('\n📝 SAMPLE ENTRIES:')
           data.sample_entries.forEach((entry: any, index: number) => {
@@ -505,23 +496,23 @@ function ViewEntriesPage() {
             console.log(`Has enhanced: ${entry.has_enhanced}`)
             console.log(`Has structured: ${entry.has_structured}`)
             console.log(`Has embeddings: ${entry.has_embeddings} (${entry.embedding_dimension}D)`)
-            
+
             if (entry.best_text_for_embedding) {
               console.log(`Best text for embedding: "${entry.best_text_for_embedding}"`)
             }
           })
         }
-        
+
         // Summary message
-        const embeddingPercentage = data.total_entries > 0 
-          ? Math.round((data.entries_with_embeddings / data.total_entries) * 100) 
+        const embeddingPercentage = data.total_entries > 0
+          ? Math.round((data.entries_with_embeddings / data.total_entries) * 100)
           : 0
         console.log(`\n📊 SUMMARY: ${embeddingPercentage}% of entries have embeddings (${data.entries_with_embeddings}/${data.total_entries})`)
-        
+
       } else {
         console.error('❌ Failed to get database state:', response.error)
       }
-      
+
     } catch (error) {
       console.error('❌ Database debug failed:', error)
     }
@@ -531,7 +522,7 @@ function ViewEntriesPage() {
     try {
       setLoading(true)
       const response = await api.getEntries(currentPage, pageSize)
-      
+
       if (response.success && response.data) {
         const loadedEntries = response.data.entries || []
         setEntries(loadedEntries)
@@ -559,17 +550,17 @@ function ViewEntriesPage() {
     try {
       setSearching(true)
       console.log('🔍 Starting semantic search for:', query)
-      
+
       const response = await api.semanticSearch(query, 20, 0.3)
-      
+
       console.log('📡 Search response:', response)
-      
+
       if (response.success && response.data) {
         // Handle nested data structure from SuccessResponse
         const searchData = response.data.data || response.data
         const results = searchData.results || []
         console.log('📊 Search results:', results)
-        
+
         if (results.length === 0) {
           console.log('⚠️ No search results found')
           setSemanticResults([])
@@ -577,10 +568,10 @@ function ViewEntriesPage() {
           setCurrentPage(1)
           return
         }
-        
+
         // Convert search results to Entry objects
         console.log('🔄 Fetching entry details for', results.length, 'results')
-        
+
         const entryPromises = results.map(async (result: any) => {
           console.log('📝 Fetching entry:', result.entry_id, 'similarity:', result.similarity)
           const entryResponse = await api.getEntry(result.entry_id)
@@ -593,11 +584,11 @@ function ViewEntriesPage() {
           console.log('❌ Failed to fetch entry:', result.entry_id)
           return null
         })
-        
+
         const entries = (await Promise.all(entryPromises)).filter(Boolean) as Entry[]
         console.log('✅ Successfully fetched', entries.length, 'entries')
         console.log('🎯 Similarities:', entries.map(e => `${(e as any).similarity * 100}%`).join(', '))
-        
+
         setSemanticResults(entries)
         setIsSemanticSearch(true)
         setCurrentPage(1) // Reset to first page for search results
@@ -622,31 +613,31 @@ function ViewEntriesPage() {
 
     try {
       console.log('🐛 DEBUG SEARCH for:', query)
-      
+
       const response = await api.debugSearch(query)
-      
+
       if (response.success && response.data) {
         const debugData = response.data.data || response.data
-        
+
         console.log('🔍 DEBUG SEARCH RESULTS:')
         console.log('Query:', debugData.query)
         console.log('Query embedding dimension:', debugData.query_embedding_dim)
         console.log('Entries checked:', debugData.entries_checked)
         console.log('Total entries in DB:', debugData.total_entries)
-        
+
         if (debugData.hiking_entries_found && debugData.hiking_entries_found.length > 0) {
           console.log(`\n📝 ENTRIES CONTAINING "${query}":`)
           debugData.hiking_entries_found.forEach((entry: any, index: number) => {
             console.log(`\n${index + 1}. Entry ID ${entry.entry_id}:`)
             console.log('  - Raw text has query:', entry.raw_has_hiking)
-            console.log('  - Enhanced text has query:', entry.enhanced_has_hiking) 
+            console.log('  - Enhanced text has query:', entry.enhanced_has_hiking)
             console.log('  - Structured text has query:', entry.structured_has_hiking)
             console.log('  - Has embeddings:', entry.has_embeddings)
             console.log('  - Text used for embedding:', entry.text_used_for_embedding)
             console.log('  - Raw preview:', entry.raw_text)
           })
         }
-        
+
         if (debugData.results && debugData.results.length > 0) {
           console.log(`\n🔢 SIMILARITY RESULTS (Top ${debugData.results.length}):`)
           debugData.results.forEach((result: any, index: number) => {
@@ -656,25 +647,25 @@ function ViewEntriesPage() {
             console.log(`   Embedding length: ${result.embedding_length}`)
           })
         }
-        
+
         // Check for potential issues
         const perfectMatches = debugData.results?.filter((r: any) => r.has_hiking) || []
         const nonMatches = debugData.results?.filter((r: any) => !r.has_hiking) || []
-        
+
         if (perfectMatches.length === 0) {
           console.log('⚠️ WARNING: No results contain the search query text!')
         }
-        
+
         if (debugData.results?.some((r: any) => Math.abs(r.similarity - 0.5) < 0.01)) {
           console.log('🚨 ALERT: Found results with ~50% similarity - this suggests BGE formatting mismatch!')
         }
-        
+
         console.log('\n📊 Summary:')
         console.log(`- Entries with embeddings: ${debugData.entries_checked}`)
         console.log(`- Entries containing "${query}": ${debugData.hiking_entries_found?.length || 0}`)
         console.log(`- Perfect text matches in results: ${perfectMatches.length}`)
         console.log(`- Non-matching results: ${nonMatches.length}`)
-        
+
       } else {
         console.error('Debug search failed:', response.error)
       }
@@ -704,7 +695,7 @@ function ViewEntriesPage() {
     try {
       setDeleting(entryId)
       const response = await api.deleteEntry(entryId)
-      
+
       if (response.success) {
         setEntries(entries.filter(entry => entry.id !== entryId))
         if (selectedEntry?.id === entryId) {
@@ -732,7 +723,7 @@ function ViewEntriesPage() {
     const content = getEntryContent(entry, version)
     const { dayOfWeek, formattedDate } = formatTimestamp(entry.timestamp)
     const filename = `entry-${dayOfWeek}-${formattedDate}-${version}.txt`
-    
+
     const blob = new Blob([content], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -767,7 +758,7 @@ ${entry.structured_summary}
 Created: ${formattedDate}
 Word Count: ${entry.word_count}
     `.trim()
-    
+
     const filename = `entry-${dayOfWeek}-${formattedDate}-all-versions.txt`
     const blob = new Blob([content], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
@@ -787,7 +778,7 @@ Word Count: ${entry.word_count}
     const day = date.getDate()
     const month = date.toLocaleDateString('en-US', { month: 'long' })
     const year = date.getFullYear()
-    
+
     // Add ordinal suffix (1st, 2nd, 3rd, 4th, etc.)
     const getOrdinalSuffix = (day: number) => {
       if (day > 3 && day < 21) return 'th'
@@ -798,14 +789,14 @@ Word Count: ${entry.word_count}
         default: return 'th'
       }
     }
-    
+
     const formattedDate = `${day}${getOrdinalSuffix(day)} ${month} ${year}`
-    const time = date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
+    const time = date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
       minute: '2-digit',
-      hour12: true 
+      hour12: true
     })
-    
+
     return { dayOfWeek, formattedDate, time }
   }
 
@@ -839,7 +830,7 @@ Word Count: ${entry.word_count}
       filtered = filtered.filter(entry => {
         const entryDate = new Date(entry.timestamp)
         const today = new Date()
-        
+
         switch (dateFilterType) {
           case 'before':
             return startDate ? entryDate < new Date(startDate) : true
@@ -913,7 +904,7 @@ Word Count: ${entry.word_count}
 
     try {
       setSaving(true)
-      
+
       // Determine which field to update based on selected version
       const updateData: any = {}
       switch (selectedVersion) {
@@ -929,18 +920,18 @@ Word Count: ${entry.word_count}
       }
 
       const response = await api.updateEntry(selectedEntry.id, updateData)
-      
+
       if (response.success && response.data) {
         // Update the entry in the local state
-        const updatedEntries = entries.map(entry => 
+        const updatedEntries = entries.map(entry =>
           entry.id === selectedEntry.id ? response.data! : entry
         )
         setEntries(updatedEntries)
         setSelectedEntry(response.data)
-        
+
         // Show success notification
         setNotification({ message: 'Entry updated successfully!', type: 'success' })
-        
+
         // Reset editing state
         setEditing(false)
         setEditedContent('')
@@ -949,9 +940,9 @@ Word Count: ${entry.word_count}
       }
     } catch (error) {
       console.error('Failed to save entry:', error)
-      setNotification({ 
-        message: error instanceof Error ? error.message : 'Failed to update entry', 
-        type: 'error' 
+      setNotification({
+        message: error instanceof Error ? error.message : 'Failed to update entry',
+        type: 'error'
       })
     } finally {
       setSaving(false)
@@ -1004,11 +995,10 @@ Word Count: ${entry.word_count}
           initial={{ opacity: 0, y: -50 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -50 }}
-          className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg border shadow-lg ${
-            notification.type === 'success' 
-              ? 'bg-green-500/10 border-green-500/20 text-green-400' 
-              : 'bg-red-500/10 border-red-500/20 text-red-400'
-          }`}
+          className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg border shadow-lg ${notification.type === 'success'
+            ? 'bg-green-500/10 border-green-500/20 text-green-400'
+            : 'bg-red-500/10 border-red-500/20 text-red-400'
+            }`}
         >
           {notification.type === 'success' ? (
             <CheckCircle className="h-4 w-4" />
@@ -1018,7 +1008,7 @@ Word Count: ${entry.word_count}
           <span className="text-sm font-medium">{notification.message}</span>
         </motion.div>
       )}
-      
+
       <div className="max-w-7xl mx-auto w-full flex flex-col h-full">
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-shrink-0">
@@ -1039,14 +1029,14 @@ Word Count: ${entry.word_count}
                   initial={false}
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
-                
+
                 <div className="relative flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  {dateFilterType === 'all' ? 'All Time' : 
-                   dateFilterType === 'last-days-months' ? `Last ${lastPeriodValue} ${lastPeriodUnit.charAt(0).toUpperCase() + lastPeriodUnit.slice(1)}` :
-                   dateFilterType === 'before' ? 'Before Date' :
-                   dateFilterType === 'after' ? 'After Date' :
-                   dateFilterType === 'on' ? 'On Date' : 'Between Dates'}
+                  {dateFilterType === 'all' ? 'All Time' :
+                    dateFilterType === 'last-days-months' ? `Last ${lastPeriodValue} ${lastPeriodUnit.charAt(0).toUpperCase() + lastPeriodUnit.slice(1)}` :
+                      dateFilterType === 'before' ? 'Before Date' :
+                        dateFilterType === 'after' ? 'After Date' :
+                          dateFilterType === 'on' ? 'On Date' : 'Between Dates'}
                 </div>
               </Button>
 
@@ -1059,7 +1049,7 @@ Word Count: ${entry.word_count}
                 >
                   <div className="space-y-4">
                     <h3 className="font-semibold text-white text-sm">Filter by Date</h3>
-                    
+
                     {/* Filter Type Selection */}
                     <div className="space-y-2">
                       <label className="flex items-center gap-2">
@@ -1072,7 +1062,7 @@ Word Count: ${entry.word_count}
                         />
                         <span className="text-white text-sm">All time</span>
                       </label>
-                      
+
                       <label className="flex items-center gap-2">
                         <input
                           type="radio"
@@ -1107,7 +1097,7 @@ Word Count: ${entry.word_count}
                           <ChevronDown className="absolute right-1 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
                         </div>
                       </label>
-                      
+
                       <label className="flex items-center gap-2">
                         <input
                           type="radio"
@@ -1140,7 +1130,7 @@ Word Count: ${entry.word_count}
                           )}
                         </div>
                       </label>
-                      
+
                       <label className="flex items-center gap-2">
                         <input
                           type="radio"
@@ -1173,7 +1163,7 @@ Word Count: ${entry.word_count}
                           )}
                         </div>
                       </label>
-                      
+
                       <label className="flex items-center gap-2">
                         <input
                           type="radio"
@@ -1206,7 +1196,7 @@ Word Count: ${entry.word_count}
                           )}
                         </div>
                       </label>
-                      
+
                       <label className="flex items-center gap-2">
                         <input
                           type="radio"
@@ -1217,7 +1207,7 @@ Word Count: ${entry.word_count}
                         />
                         <span className="text-white text-sm">Between</span>
                       </label>
-                      
+
                       {dateFilterType === 'between' && (
                         <div className="ml-6 space-y-2">
                           <div className="flex items-center gap-2">
@@ -1271,7 +1261,7 @@ Word Count: ${entry.word_count}
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Action Buttons */}
                     <div className="flex justify-end gap-2 pt-2 border-t border-border">
                       <Button
@@ -1373,7 +1363,7 @@ Word Count: ${entry.word_count}
                   const { dayOfWeek, formattedDate, time } = formatTimestamp(entry.timestamp)
                   const isExpanded = expandedDropdowns.has(entry.id)
                   const isSelected = selectedEntry?.id === entry.id
-                  
+
                   return (
                     <motion.div
                       key={entry.id}
@@ -1382,13 +1372,12 @@ Word Count: ${entry.word_count}
                       className="space-y-2"
                     >
                       {/* Entry Header - Always visible */}
-                      <Card className={`cursor-pointer transition-all duration-200 hover:shadow-lg relative overflow-hidden group ${
-                        isSelected ? 'ring-2 ring-primary/50 bg-primary/5' : 'hover:bg-muted/30'
-                      }`}>
+                      <Card className={`cursor-pointer transition-all duration-200 hover:shadow-lg relative overflow-hidden group ${isSelected ? 'ring-2 ring-primary/50 bg-primary/5' : 'hover:bg-muted/30'
+                        }`}>
                         {/* Shimmer effect */}
                         <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:translate-x-full transition-transform duration-700" />
-                        
-                        <CardHeader 
+
+                        <CardHeader
                           className="pb-2 pt-3 px-3 relative"
                           onClick={() => {
                             setSelectedEntry(entry)
@@ -1455,7 +1444,7 @@ Word Count: ${entry.word_count}
                               </Button>
                             </div>
                           </div>
-                          
+
                           {/* Default Enhanced Preview */}
                           <div className="mt-2">
                             <p className="text-white text-sm leading-relaxed">
@@ -1507,7 +1496,7 @@ Word Count: ${entry.word_count}
                             {viewModes.map((mode) => {
                               const content = getEntryContent(entry, mode.key as any)
                               if (!content) return null
-                              
+
                               return (
                                 <motion.div
                                   key={mode.key}
@@ -1528,65 +1517,65 @@ Word Count: ${entry.word_count}
                                       setSelectedVersion(mode.key as any)
                                     }}
                                   >
-                                  
-                                  <CardContent className="p-3 relative">
-                                    <div className="flex items-center justify-between mb-2">
-                                      <div className="flex items-center gap-2">
-                                        <mode.icon className="h-4 w-4 text-white" />
-                                        <span className="font-medium text-white text-sm">{mode.title}</span>
+
+                                    <CardContent className="p-3 relative">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <mode.icon className="h-4 w-4 text-white" />
+                                          <span className="font-medium text-white text-sm">{mode.title}</span>
+                                        </div>
+                                        {/* Action buttons for dropdown entries */}
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              setSelectedEntry(entry)
+                                              setSelectedVersion(mode.key as any)
+                                              startEditing()
+                                            }}
+                                            className="h-6 w-6 p-0 text-blue-300 drop-shadow-[0_0_4px_rgba(147,197,253,0.6)] hover:bg-purple-500/20 hover:text-purple-400 hover:drop-shadow-[0_0_6px_rgba(196,181,253,0.8)]"
+                                            title="Edit this version"
+                                          >
+                                            <Edit className="h-3 w-3" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              exportEntry(entry, mode.key as any)
+                                            }}
+                                            className="h-6 w-6 p-0 text-blue-300 drop-shadow-[0_0_4px_rgba(147,197,253,0.6)] hover:bg-blue-500/20 hover:text-blue-400 hover:drop-shadow-[0_0_6px_rgba(96,165,250,0.8)]"
+                                            title="Export this version"
+                                          >
+                                            <Download className="h-3 w-3" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              const { dayOfWeek, formattedDate } = formatTimestamp(entry.timestamp)
+                                              showDeleteConfirmation(entry.id, `${dayOfWeek}, ${formattedDate}`)
+                                            }}
+                                            disabled={deleting === entry.id}
+                                            className="h-6 w-6 p-0 text-blue-300 drop-shadow-[0_0_4px_rgba(147,197,253,0.6)] hover:bg-red-500/20 hover:text-red-400 hover:drop-shadow-[0_0_6px_rgba(248,113,113,0.8)]"
+                                            title="Delete entry"
+                                          >
+                                            {deleting === entry.id ? (
+                                              <Loader2 className="h-3 w-3 animate-spin" />
+                                            ) : (
+                                              <Trash2 className="h-3 w-3" />
+                                            )}
+                                          </Button>
+                                        </div>
                                       </div>
-                                      {/* Action buttons for dropdown entries */}
-                                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            setSelectedEntry(entry)
-                                            setSelectedVersion(mode.key as any)
-                                            startEditing()
-                                          }}
-                                          className="h-6 w-6 p-0 text-blue-300 drop-shadow-[0_0_4px_rgba(147,197,253,0.6)] hover:bg-purple-500/20 hover:text-purple-400 hover:drop-shadow-[0_0_6px_rgba(196,181,253,0.8)]"
-                                          title="Edit this version"
-                                        >
-                                          <Edit className="h-3 w-3" />
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            exportEntry(entry, mode.key as any)
-                                          }}
-                                          className="h-6 w-6 p-0 text-blue-300 drop-shadow-[0_0_4px_rgba(147,197,253,0.6)] hover:bg-blue-500/20 hover:text-blue-400 hover:drop-shadow-[0_0_6px_rgba(96,165,250,0.8)]"
-                                          title="Export this version"
-                                        >
-                                          <Download className="h-3 w-3" />
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            const { dayOfWeek, formattedDate } = formatTimestamp(entry.timestamp)
-                                            showDeleteConfirmation(entry.id, `${dayOfWeek}, ${formattedDate}`)
-                                          }}
-                                          disabled={deleting === entry.id}
-                                          className="h-6 w-6 p-0 text-blue-300 drop-shadow-[0_0_4px_rgba(147,197,253,0.6)] hover:bg-red-500/20 hover:text-red-400 hover:drop-shadow-[0_0_6px_rgba(248,113,113,0.8)]"
-                                          title="Delete entry"
-                                        >
-                                          {deleting === entry.id ? (
-                                            <Loader2 className="h-3 w-3 animate-spin" />
-                                          ) : (
-                                            <Trash2 className="h-3 w-3" />
-                                          )}
-                                        </Button>
-                                      </div>
-                                    </div>
-                                    <p className="text-white text-sm leading-relaxed">
-                                      {truncateText(content, 100)}
-                                    </p>
-                                  </CardContent>
+                                      <p className="text-white text-sm leading-relaxed">
+                                        {truncateText(content, 100)}
+                                      </p>
+                                    </CardContent>
                                   </Card>
                                 </motion.div>
                               )
@@ -1599,7 +1588,7 @@ Word Count: ${entry.word_count}
                 })
               )}
             </div>
-            
+
             {/* Pagination Controls - Fixed at bottom */}
             {!searchQuery && totalPages > 1 && (
               <div className="mt-4 flex items-center justify-between border-t border-border pt-4 flex-shrink-0">
@@ -1613,12 +1602,12 @@ Word Count: ${entry.word_count}
                   <ChevronLeft className="h-4 w-4" />
                   Previous
                 </Button>
-                
+
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span>Page {currentPage} of {totalPages}</span>
                   <span className="text-xs">({totalEntries} total)</span>
                 </div>
-                
+
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1744,11 +1733,10 @@ Word Count: ${entry.word_count}
                         variant="ghost"
                         size="sm"
                         onClick={() => setSelectedVersion(mode.key as any)}
-                        className={`relative overflow-hidden group transition-all duration-200 ${
-                          selectedVersion === mode.key 
-                            ? `${mode.bgColor} ${mode.borderColor} border text-white hover:${mode.bgColor} hover:text-white` 
-                            : 'text-white border border-border hover:bg-muted/50 hover:text-white hover:border-muted'
-                        }`}
+                        className={`relative overflow-hidden group transition-all duration-200 ${selectedVersion === mode.key
+                          ? `${mode.bgColor} ${mode.borderColor} border text-white hover:${mode.bgColor} hover:text-white`
+                          : 'text-white border border-border hover:bg-muted/50 hover:text-white hover:border-muted'
+                          }`}
                       >
                         {/* Animated background for active state */}
                         {selectedVersion === mode.key && (
@@ -1759,7 +1747,7 @@ Word Count: ${entry.word_count}
                             transition={{ type: "spring", stiffness: 500, damping: 30 }}
                           />
                         )}
-                        
+
                         <div className="relative flex items-center">
                           <mode.icon className="h-4 w-4 mr-2" />
                           {mode.title}
@@ -1783,10 +1771,10 @@ Word Count: ${entry.word_count}
                       </p>
                     )}
                   </div>
-                  
+
                   {/* Mood Tags Section */}
                   {selectedEntry.mood_tags && selectedEntry.mood_tags.length > 0 && (
-                    <motion.div 
+                    <motion.div
                       className="mt-4 pt-4 border-t border-border"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -1798,21 +1786,21 @@ Word Count: ${entry.word_count}
                             key={`${selectedEntry.id}-${tag}-${index}`}
                             initial={{ opacity: 0, scale: 0.7, y: 5 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            transition={{ 
-                              duration: 0.3, 
+                            transition={{
+                              duration: 0.3,
                               delay: 0.2 + (index * 0.08),
                               type: "spring",
                               stiffness: 300,
                               damping: 20
                             }}
-                            whileHover={{ 
+                            whileHover={{
                               scale: 1.1,
                               y: -2,
                               transition: { duration: 0.2 }
                             }}
                             whileTap={{ scale: 0.95 }}
                           >
-                            <Badge 
+                            <Badge
                               className={`bg-gradient-to-r ${getMoodColor(tag)} text-white text-xs cursor-pointer shadow-sm hover:shadow-md transition-shadow duration-200`}
                             >
                               {getMoodEmoji(tag)} {tag}
@@ -1822,7 +1810,7 @@ Word Count: ${entry.word_count}
                       </div>
                     </motion.div>
                   )}
-                  
+
                   <div className="mt-6 pt-4 border-t border-border">
                     <div className="flex items-center text-sm text-muted-foreground">
                       <span>{selectedEntry.word_count} words</span>
@@ -1890,11 +1878,10 @@ Word Count: ${entry.word_count}
                         variant="ghost"
                         size="sm"
                         onClick={() => setSelectedVersion(mode.key as any)}
-                        className={`relative overflow-hidden group transition-all duration-200 ${
-                          selectedVersion === mode.key 
-                            ? `${mode.bgColor} ${mode.borderColor} border text-white hover:${mode.bgColor} hover:text-white` 
-                            : 'text-white border border-border hover:bg-muted/50 hover:text-white hover:border-muted'
-                        }`}
+                        className={`relative overflow-hidden group transition-all duration-200 ${selectedVersion === mode.key
+                          ? `${mode.bgColor} ${mode.borderColor} border text-white hover:${mode.bgColor} hover:text-white`
+                          : 'text-white border border-border hover:bg-muted/50 hover:text-white hover:border-muted'
+                          }`}
                       >
                         {/* Animated background for active state */}
                         {selectedVersion === mode.key && (
@@ -1905,7 +1892,7 @@ Word Count: ${entry.word_count}
                             transition={{ type: "spring", stiffness: 500, damping: 30 }}
                           />
                         )}
-                        
+
                         <div className="relative flex items-center">
                           <mode.icon className="h-4 w-4 mr-2" />
                           {mode.title}
@@ -2052,12 +2039,12 @@ Word Count: ${entry.word_count}
                   <p className="text-sm text-muted-foreground">This action cannot be undone</p>
                 </div>
               </div>
-              
+
               <p className="text-white mb-6">
                 Are you sure you want to delete the entry from{' '}
                 <span className="font-medium text-primary">{deleteConfirmation.entryTitle}</span>?
               </p>
-              
+
               <div className="flex justify-end gap-3">
                 <Button
                   variant="ghost"

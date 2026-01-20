@@ -9,11 +9,11 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
 import { useToast } from '@/components/ui/use-toast'
 import { api } from '@/lib/api'
-import { 
-  Diamond, 
-  Sparkles, 
-  TrendingUp, 
-  Calendar, 
+import {
+  Diamond,
+  Sparkles,
+  TrendingUp,
+  Calendar,
   Heart,
   Loader2,
   RefreshCw,
@@ -57,24 +57,24 @@ function PatternInsightsPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [selectedPattern, setSelectedPattern] = useState<Pattern | null>(null)
   const [showUnlockAnimation, setShowUnlockAnimation] = useState(false)
-  
+
   // Keyword entries modal state
   const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null)
   const [keywordEntries, setKeywordEntries] = useState<any[]>([])
   const [loadingKeywordEntries, setLoadingKeywordEntries] = useState(false)
-  
+
   // Pattern entries modal state
   const [selectedPatternForEntries, setSelectedPatternForEntries] = useState<Pattern | null>(null)
   const [patternEntries, setPatternEntries] = useState<any[]>([])
   const [loadingPatternEntries, setLoadingPatternEntries] = useState(false)
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize] = useState(12) // 12 patterns per page for grid layout
-  
+
   // Get current tab from URL or default to 'wordcloud'
   const currentTab = searchParams.get('tab') || 'wordcloud'
-  
+
   // Date filtering state (exact same as ViewEntriesPage)
   const [showDateFilter, setShowDateFilter] = useState(false)
   const [dateFilterType, setDateFilterType] = useState<'all' | 'before' | 'after' | 'between' | 'on' | 'last-days-months'>('all')
@@ -100,9 +100,9 @@ function PatternInsightsPage() {
       const patternsResponse = await api.getPatterns()
       if (patternsResponse.success && patternsResponse.data) {
         // Backend wraps data in SuccessResponse, so access nested data
-        const patternsData = patternsResponse.data.data || patternsResponse.data
+        const patternsData = (patternsResponse.data as any).data || patternsResponse.data
         setPatterns(patternsData.patterns || [])
-        
+
         // Check if this is the first time viewing patterns
         const hasViewedPatterns = localStorage.getItem('hasViewedPatterns')
         if (!hasViewedPatterns && (patternsData.patterns || []).length > 0) {
@@ -129,13 +129,13 @@ function PatternInsightsPage() {
       const response = await api.analyzePatterns()
       if (response.success) {
         // Backend wraps data in SuccessResponse, so access nested data
-        const analyzeData = response.data?.data || response.data
+        const analyzeData = (response.data as any)?.data || response.data
         toast({
           title: 'Pattern analysis complete',
           description: `Found ${analyzeData.patterns_found || 0} new patterns`,
           variant: 'default'
         })
-        
+
         // Reload patterns
         await loadExistingPatterns()
       }
@@ -171,7 +171,7 @@ function PatternInsightsPage() {
       filtered = filtered.filter(pattern => {
         const patternDate = new Date(pattern.last_seen) // Use last_seen as primary date
         const today = new Date()
-        
+
         switch (dateFilterType) {
           case 'before':
             return startDate ? patternDate < new Date(startDate) : true
@@ -210,7 +210,7 @@ function PatternInsightsPage() {
   // Generate word cloud data from all patterns
   const wordCloudData = useMemo(() => {
     const wordFrequency: Record<string, number> = {}
-    
+
     filteredPatterns.forEach(pattern => {
       if (pattern.keywords) {
         pattern.keywords.forEach(keyword => {
@@ -233,13 +233,13 @@ function PatternInsightsPage() {
       temporal: [],
       behavior: []
     }
-    
+
     filteredPatterns.forEach(pattern => {
       if (grouped[pattern.pattern_type]) {
         grouped[pattern.pattern_type].push(pattern)
       }
     })
-    
+
     return grouped
   }, [filteredPatterns])
 
@@ -308,7 +308,7 @@ function PatternInsightsPage() {
 
   const handleWordClick = (word: any) => {
     // Find patterns containing this keyword
-    const relatedPatterns = patterns.filter(p => 
+    const relatedPatterns = patterns.filter(p =>
       p.keywords.includes(word.text)
     )
     if (relatedPatterns.length > 0) {
@@ -320,15 +320,15 @@ function PatternInsightsPage() {
     setSelectedKeyword(keyword)
     setLoadingKeywordEntries(true)
     setKeywordEntries([])
-    
+
     try {
       const response = await api.getEntriesByKeyword(keyword)
-      
+
       if (response.success && response.data) {
         // Handle nested response structure similar to getPatterns
-        const responseData = response.data.data || response.data
+        const responseData = (response.data as any).data || response.data
         const entries = responseData.entries || []
-        
+
         setKeywordEntries(entries)
       } else {
         toast({
@@ -353,15 +353,15 @@ function PatternInsightsPage() {
     setSelectedPatternForEntries(pattern)
     setLoadingPatternEntries(true)
     setPatternEntries([])
-    
+
     try {
       const response = await api.getPatternEntries(pattern.id)
-      
+
       if (response.success && response.data) {
         // Handle nested response structure
-        const responseData = response.data.data || response.data
+        const responseData = (response.data as any).data || response.data
         const entries = responseData.entries || []
-        
+
         setPatternEntries(entries)
       } else {
         toast({
@@ -422,8 +422,8 @@ function PatternInsightsPage() {
             <p className="text-gray-400 mb-6">
               Keep journaling to discover insights about your life
             </p>
-            <Button 
-              onClick={generateInsights} 
+            <Button
+              onClick={generateInsights}
               disabled={refreshing}
               variant="ghost"
               size="sm"
@@ -475,11 +475,11 @@ function PatternInsightsPage() {
               >
                 <div className="relative flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  {dateFilterType === 'all' ? 'All Time' : 
-                   dateFilterType === 'last-days-months' ? `Last ${lastPeriodValue} ${lastPeriodUnit.charAt(0).toUpperCase() + lastPeriodUnit.slice(1)}` :
-                   dateFilterType === 'before' ? 'Before Date' :
-                   dateFilterType === 'after' ? 'After Date' :
-                   dateFilterType === 'on' ? 'On Date' : 'Between Dates'}
+                  {dateFilterType === 'all' ? 'All Time' :
+                    dateFilterType === 'last-days-months' ? `Last ${lastPeriodValue} ${lastPeriodUnit.charAt(0).toUpperCase() + lastPeriodUnit.slice(1)}` :
+                      dateFilterType === 'before' ? 'Before Date' :
+                        dateFilterType === 'after' ? 'After Date' :
+                          dateFilterType === 'on' ? 'On Date' : 'Between Dates'}
                 </div>
               </Button>
 
@@ -488,7 +488,7 @@ function PatternInsightsPage() {
                 <div className="date-filter-popup absolute top-full right-0 mt-2 w-96 bg-card border border-border rounded-lg shadow-xl z-50 p-4">
                   <div className="space-y-4">
                     <h3 className="font-semibold text-white text-sm">Filter by Date</h3>
-                    
+
                     {/* Filter Type Selection */}
                     <div className="space-y-2">
                       <label className="flex items-center gap-2">
@@ -501,7 +501,7 @@ function PatternInsightsPage() {
                         />
                         <span className="text-white text-sm">All time</span>
                       </label>
-                      
+
                       <label className="flex items-center gap-2">
                         <input
                           type="radio"
@@ -536,7 +536,7 @@ function PatternInsightsPage() {
                           <ChevronDown className="absolute right-1 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
                         </div>
                       </label>
-                      
+
                       <label className="flex items-center gap-2">
                         <input
                           type="radio"
@@ -569,7 +569,7 @@ function PatternInsightsPage() {
                           )}
                         </div>
                       </label>
-                      
+
                       <label className="flex items-center gap-2">
                         <input
                           type="radio"
@@ -602,7 +602,7 @@ function PatternInsightsPage() {
                           )}
                         </div>
                       </label>
-                      
+
                       <label className="flex items-center gap-2">
                         <input
                           type="radio"
@@ -635,7 +635,7 @@ function PatternInsightsPage() {
                           )}
                         </div>
                       </label>
-                      
+
                       <label className="flex items-center gap-2">
                         <input
                           type="radio"
@@ -646,7 +646,7 @@ function PatternInsightsPage() {
                         />
                         <span className="text-white text-sm">Between</span>
                       </label>
-                      
+
                       {dateFilterType === 'between' && (
                         <div className="ml-6 space-y-2">
                           <div className="flex items-center gap-2">
@@ -705,8 +705,8 @@ function PatternInsightsPage() {
               )}
             </div>
 
-            <Button 
-              onClick={generateInsights} 
+            <Button
+              onClick={generateInsights}
               disabled={refreshing}
               variant="ghost"
               size="sm"
@@ -753,7 +753,7 @@ function PatternInsightsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
-                className="grid grid-cols-1 lg:grid-cols-4 gap-4" 
+                className="grid grid-cols-1 lg:grid-cols-4 gap-4"
                 style={{ minHeight: '600px' }}
               >
                 <Card className="lg:col-span-3 bg-card/50 backdrop-blur-sm border-border/50 flex flex-col" style={{ minHeight: '600px' }}>
@@ -774,7 +774,7 @@ function PatternInsightsPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="grid grid-cols-1 lg:grid-cols-4 gap-4" 
+                className="grid grid-cols-1 lg:grid-cols-4 gap-4"
                 style={{ minHeight: '600px' }}
               >
                 <Card className="lg:col-span-3 bg-card/50 backdrop-blur-sm border-border/50 flex flex-col" style={{ minHeight: '600px' }}>
@@ -808,7 +808,7 @@ function PatternInsightsPage() {
                       if (typePatterns.length === 0) return null
                       const Icon = getPatternIcon(type)
                       const colorClass = getPatternColor(type)
-                      
+
                       return (
                         <div key={type} className="space-y-2">
                           <div className="flex items-center gap-2">
@@ -880,110 +880,110 @@ function PatternInsightsPage() {
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-full">
                   {paginatedPatterns.map(pattern => {
-                  const Icon = getPatternIcon(pattern.pattern_type)
-                  const colorClass = getPatternColor(pattern.pattern_type)
-                  
-                  return (
-                    <motion.div
-                      key={pattern.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      whileHover={{ scale: 1.02 }}
-                      className="min-w-0 w-full"
-                    >
-                      <Card 
-                        className="bg-card/50 backdrop-blur-sm border-border/50 hover:bg-card/70 cursor-pointer transition-all w-full min-w-0 h-full flex flex-col"
-                        onClick={() => setSelectedPattern(pattern)}
+                    const Icon = getPatternIcon(pattern.pattern_type)
+                    const colorClass = getPatternColor(pattern.pattern_type)
+
+                    return (
+                      <motion.div
+                        key={pattern.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        whileHover={{ scale: 1.02 }}
+                        className="min-w-0 w-full"
                       >
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <Icon className={`h-5 w-5 ${colorClass}`} />
-                            <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-xs">
-                              {pattern.pattern_type}
-                            </Badge>
-                          </div>
-                          <CardTitle className="text-white text-lg mt-2">
-                            {pattern.description}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex-1">
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-gray-400">Frequency</span>
-                              <span className="text-white font-medium">
-                                {pattern.frequency} times
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-gray-400">Confidence</span>
-                              <span className="text-white font-medium">
-                                {Math.round(pattern.confidence * 100)}%
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-gray-400">First seen</span>
-                              <span className="text-white">
-                                {format(new Date(pattern.first_seen), 'MMM d')}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="mt-3 flex flex-wrap gap-1">
-                            {pattern.keywords.slice(0, 3).map((keyword, idx) => (
-                              <Badge 
-                                key={idx} 
-                                className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-xs cursor-pointer hover:bg-cyan-500/20 transition-colors"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleKeywordClick(keyword)
-                                }}
-                              >
-                                {keyword}
+                        <Card
+                          className="bg-card/50 backdrop-blur-sm border-border/50 hover:bg-card/70 cursor-pointer transition-all w-full min-w-0 h-full flex flex-col"
+                          onClick={() => setSelectedPattern(pattern)}
+                        >
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <Icon className={`h-5 w-5 ${colorClass}`} />
+                              <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-xs">
+                                {pattern.pattern_type}
                               </Badge>
-                            ))}
-                            {pattern.keywords.length > 3 && (
-                              <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-xs">
-                                +{pattern.keywords.length - 3}
-                              </Badge>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  )
-                })}
+                            </div>
+                            <CardTitle className="text-white text-lg mt-2">
+                              {pattern.description}
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="flex-1">
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-gray-400">Frequency</span>
+                                <span className="text-white font-medium">
+                                  {pattern.frequency} times
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-gray-400">Confidence</span>
+                                <span className="text-white font-medium">
+                                  {Math.round(pattern.confidence * 100)}%
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-gray-400">First seen</span>
+                                <span className="text-white">
+                                  {format(new Date(pattern.first_seen), 'MMM d')}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-1">
+                              {pattern.keywords.slice(0, 3).map((keyword, idx) => (
+                                <Badge
+                                  key={idx}
+                                  className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-xs cursor-pointer hover:bg-cyan-500/20 transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleKeywordClick(keyword)
+                                  }}
+                                >
+                                  {keyword}
+                                </Badge>
+                              ))}
+                              {pattern.keywords.length > 3 && (
+                                <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-xs">
+                                  +{pattern.keywords.length - 3}
+                                </Badge>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    )
+                  })}
                 </div>
-              
+
                 {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="mt-4 flex items-center justify-between border-t border-border pt-4 flex-shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => goToPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="flex items-center gap-2 bg-card border border-border text-primary hover:bg-card/80 hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Previous
-                  </Button>
-                  
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>Page {currentPage} of {totalPages}</span>
-                    <span className="text-xs">({filteredPatterns.length} total)</span>
+                {totalPages > 1 && (
+                  <div className="mt-4 flex items-center justify-between border-t border-border pt-4 flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => goToPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="flex items-center gap-2 bg-card border border-border text-primary hover:bg-card/80 hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>Page {currentPage} of {totalPages}</span>
+                      <span className="text-xs">({filteredPatterns.length} total)</span>
+                    </div>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => goToPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="flex items-center gap-2 bg-card border border-border text-primary hover:bg-card/80 hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
                   </div>
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => goToPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="flex items-center gap-2 bg-card border border-border text-primary hover:bg-card/80 hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+                )}
               </motion.div>
             )}
           </TabsContent>
@@ -1048,9 +1048,9 @@ function PatternInsightsPage() {
                       .map(pattern => {
                         const Icon = getPatternIcon(pattern.pattern_type)
                         const colorClass = getPatternColor(pattern.pattern_type)
-                        
+
                         return (
-                          <Card 
+                          <Card
                             key={pattern.id}
                             className="bg-card/50 backdrop-blur-sm border-border/50 hover:bg-card/70 cursor-pointer transition-colors"
                             onClick={() => setSelectedPattern(pattern)}
@@ -1070,8 +1070,8 @@ function PatternInsightsPage() {
                                   {pattern.keywords && pattern.keywords.length > 0 && (
                                     <div className="mt-2 flex flex-wrap gap-1">
                                       {pattern.keywords.slice(0, 3).map((keyword, idx) => (
-                                        <Badge 
-                                          key={idx} 
+                                        <Badge
+                                          key={idx}
                                           className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-xs cursor-pointer hover:bg-cyan-500/20 transition-colors"
                                           onClick={(e) => {
                                             e.stopPropagation()
@@ -1097,7 +1097,7 @@ function PatternInsightsPage() {
                       })}
                   </div>
                 </div>
-                
+
                 {/* Timeline Pagination */}
                 {totalPages > 1 && (
                   <div className="mt-4 flex items-center justify-between border-t border-border pt-4 flex-shrink-0">
@@ -1111,12 +1111,12 @@ function PatternInsightsPage() {
                       <ChevronLeft className="h-4 w-4" />
                       Previous
                     </Button>
-                    
+
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span>Page {currentPage} of {totalPages}</span>
                       <span className="text-xs">({filteredPatterns.length} total)</span>
                     </div>
-                    
+
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1141,7 +1141,7 @@ function PatternInsightsPage() {
               className="grid grid-cols-1 lg:grid-cols-2 gap-6"
               style={{ minHeight: '600px' }}
             >
-              <MoodContent 
+              <MoodContent
                 patterns={patterns}
                 dateFilterType={dateFilterType}
                 startDate={startDate}
@@ -1227,8 +1227,8 @@ function PatternInsightsPage() {
                   <p className="text-sm text-gray-400 mb-2">Keywords</p>
                   <div className="flex flex-wrap gap-2">
                     {selectedPattern.keywords.map((keyword, idx) => (
-                      <Badge 
-                        key={idx} 
+                      <Badge
+                        key={idx}
                         className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-xs cursor-pointer hover:bg-cyan-500/20 transition-colors"
                         onClick={() => handleKeywordClick(keyword)}
                       >
@@ -1319,24 +1319,24 @@ function PatternInsightsPage() {
                           const date = new Date(timestamp)
                           const now = new Date()
                           const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-                          
+
                           const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' })
-                          const formattedDate = date.toLocaleDateString('en-US', { 
-                            month: 'short', 
+                          const formattedDate = date.toLocaleDateString('en-US', {
+                            month: 'short',
                             day: 'numeric',
                             year: diffInDays > 365 ? 'numeric' : undefined
                           })
-                          const time = date.toLocaleTimeString('en-US', { 
-                            hour: 'numeric', 
+                          const time = date.toLocaleTimeString('en-US', {
+                            hour: 'numeric',
                             minute: '2-digit',
-                            hour12: true 
+                            hour12: true
                           })
-                          
+
                           return { dayOfWeek, formattedDate, time }
                         }
 
                         const { dayOfWeek, formattedDate, time } = formatTimestamp(entry.timestamp)
-                        
+
                         return (
                           <motion.div
                             key={entry.id}
@@ -1467,24 +1467,24 @@ function PatternInsightsPage() {
                           const date = new Date(timestamp)
                           const now = new Date()
                           const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-                          
+
                           const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' })
-                          const formattedDate = date.toLocaleDateString('en-US', { 
-                            month: 'short', 
+                          const formattedDate = date.toLocaleDateString('en-US', {
+                            month: 'short',
                             day: 'numeric',
                             year: diffInDays > 365 ? 'numeric' : undefined
                           })
-                          const time = date.toLocaleTimeString('en-US', { 
-                            hour: 'numeric', 
+                          const time = date.toLocaleTimeString('en-US', {
+                            hour: 'numeric',
                             minute: '2-digit',
-                            hour12: true 
+                            hour12: true
                           })
-                          
+
                           return { dayOfWeek, formattedDate, time }
                         }
 
                         const { dayOfWeek, formattedDate, time } = formatTimestamp(entry.timestamp)
-                        
+
                         return (
                           <motion.div
                             key={entry.id}
@@ -1598,17 +1598,17 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
         } else {
           setLoading(true)
         }
-        
+
         // Get entries from API to access mood_tags
         const response = await api.getEntries(1, 100) // Maximum allowed by API
         if (response.success && response.data) {
           const entries = response.data.entries
-          
+
           // Filter entries based on current date filter
           const filteredByDate = entries.filter(entry => {
             const entryDate = new Date(entry.timestamp)
             const today = new Date()
-            
+
             switch (dateFilterType) {
               case 'before':
                 return startDate ? entryDate < new Date(startDate) : true
@@ -1639,21 +1639,21 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
                 return true
             }
           })
-          
+
           // Group entries by date and collect moods
           const moodsByDate = new Map<string, {
             moods: string[]
             entries: any[]
             fullDate: Date
           }>()
-          
+
           console.log('MoodGraph: Filtered entries count:', filteredByDate.length)
-          
+
           filteredByDate.forEach(entry => {
             if (entry.mood_tags && entry.mood_tags.length > 0) {
               const entryDate = new Date(entry.timestamp)
               const dateKey = format(entryDate, 'MMM d, yyyy')
-              
+
               if (!moodsByDate.has(dateKey)) {
                 moodsByDate.set(dateKey, {
                   moods: [],
@@ -1661,7 +1661,7 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
                   fullDate: entryDate
                 })
               }
-              
+
               const dayData = moodsByDate.get(dateKey)!
               entry.mood_tags.forEach(mood => {
                 if (!dayData.moods.includes(mood)) {
@@ -1671,9 +1671,9 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
               dayData.entries.push(entry)
             }
           })
-          
+
           console.log('MoodGraph: Moods by date map size:', moodsByDate.size)
-          
+
           // Convert to chart data and sort by date (newest first)
           const chartData = Array.from(moodsByDate.entries())
             .map(([date, data]) => ({
@@ -1684,7 +1684,7 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
               entries: data.entries
             }))
             .sort((a, b) => b.fullDate.getTime() - a.fullDate.getTime())
-          
+
           setMoodData(chartData)
         }
       } catch (error) {
@@ -1695,7 +1695,7 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
         setIsFilterChanging(false)
       }
     }
-    
+
     fetchMoodData()
   }, [patterns, dateFilterType, startDate, endDate, lastPeriodValue, lastPeriodUnit])
 
@@ -1719,7 +1719,7 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
     const positiveModds = ['happy', 'excited', 'grateful', 'content', 'peaceful', 'confident', 'proud', 'hopeful', 'inspired', 'loved', 'optimistic']
     const negativeModds = ['sad', 'angry', 'frustrated', 'anxious', 'stressed', 'worried', 'disappointed', 'lonely', 'scared', 'overwhelmed']
     const neutralModds = ['tired', 'calm', 'surprised', 'confused', 'bored', 'curious', 'focused']
-    
+
     if (positiveModds.includes(mood.toLowerCase())) {
       return 'from-green-400 to-emerald-500'
     } else if (negativeModds.includes(mood.toLowerCase())) {
@@ -1749,21 +1749,21 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
     setSelectedMoodName(mood)
     setLoadingMoodEntries(true)
     setSelectedMoodEntries([])
-    
+
     try {
       // Get all entries and filter by mood_tags
       const response = await api.getEntries(1, 100)
-      
+
       if (response.success && response.data) {
         const entries = response.data.entries
-        
+
         // Filter entries that have the selected mood in their mood_tags
-        const filteredEntries = entries.filter(entry => 
-          entry.mood_tags && 
-          Array.isArray(entry.mood_tags) && 
+        const filteredEntries = entries.filter(entry =>
+          entry.mood_tags &&
+          Array.isArray(entry.mood_tags) &&
           entry.mood_tags.includes(mood)
         )
-        
+
         setSelectedMoodEntries(filteredEntries)
       } else {
         setSelectedMoodEntries([])
@@ -1818,13 +1818,13 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
       >
         <Card className="lg:col-span-2 bg-card/50 backdrop-blur-sm border-border/50 flex flex-col" style={{ minHeight: '600px' }}>
           <CardContent className="flex-1 flex items-center justify-center">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3, delay: 0.1 }}
               className="text-center"
             >
-              <motion.div 
+              <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ duration: 0.3, delay: 0.2 }}
@@ -1843,7 +1843,7 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
     )
   }
 
-  
+
   const moodCounts = new Map<string, number>()
   allEntries.forEach(entry => {
     if (entry.mood_tags && Array.isArray(entry.mood_tags)) {
@@ -1853,7 +1853,7 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
     }
   })
   const topMoods = Array.from(moodCounts.entries())
-    .sort(([,a], [,b]) => b - a)
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 8)
 
   const maxIntensity = Math.max(...moodData.map(d => d.intensity))
@@ -1897,7 +1897,7 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
                           </p>
                           <div className="mt-2 flex flex-wrap gap-1">
                             {day.moods.slice(0, 5).map((mood, moodIndex) => (
-                              <Badge 
+                              <Badge
                                 key={moodIndex}
                                 className={`bg-gradient-to-r ${getMoodColor(mood)} text-white text-xs cursor-pointer hover:scale-105 transition-transform duration-200`}
                                 onClick={() => handleMoodClick(mood)}
@@ -1906,7 +1906,7 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
                               </Badge>
                             ))}
                             {day.moods.length > 5 && (
-                              <Badge 
+                              <Badge
                                 className="bg-muted/30 text-muted-foreground text-xs cursor-pointer hover:bg-muted/40 transition-colors duration-200"
                                 onClick={() => handleShowAllMoods(day.date, day.moods)}
                               >
@@ -1924,7 +1924,7 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
           </CardContent>
         </Card>
       </motion.div>
-      
+
       {/* Mood Analytics */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -1965,14 +1965,14 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
                   <div className="p-4 rounded-xl bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30 transition-all duration-300 relative overflow-hidden">
                     {/* Subtle gradient overlay for depth */}
                     <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    
+
                     {/* Shimmer effect */}
                     <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:translate-x-full transition-transform duration-700" />
-                    
+
                     <div className="text-center relative">
                       <motion.div
                         className="relative inline-block mb-2"
-                        whileHover={{ 
+                        whileHover={{
                           scale: 1.1,
                           rotate: 5
                         }}
@@ -1981,13 +1981,13 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
                         {/* Colored glow behind emoji */}
                         <div className={`absolute inset-0 bg-gradient-to-br ${getMoodColor(mood)} opacity-20 blur-sm rounded-full scale-150`} />
                         <div className={`absolute inset-0 bg-gradient-to-br ${getMoodColor(mood)} opacity-10 blur-md rounded-full scale-200`} />
-                        
+
                         {/* Emoji */}
                         <div className="relative text-3xl">
                           {getMoodEmoji(mood)}
                         </div>
                       </motion.div>
-                      
+
                       <div className="text-2xl font-bold mb-1 text-white">{count}</div>
                       <div className="text-sm capitalize font-medium text-gray-300 group-hover:text-white transition-colors duration-300">{mood}</div>
                       <div className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors duration-300">entries</div>
@@ -2063,23 +2063,23 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
                           const date = new Date(timestamp)
                           const now = new Date()
                           const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-                          
+
                           const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' })
-                          const formattedDate = date.toLocaleDateString('en-US', { 
-                            month: 'short', 
+                          const formattedDate = date.toLocaleDateString('en-US', {
+                            month: 'short',
                             day: 'numeric',
                             year: diffInDays > 365 ? 'numeric' : undefined
                           })
-                          const time = date.toLocaleTimeString('en-US', { 
-                            hour: 'numeric', 
+                          const time = date.toLocaleTimeString('en-US', {
+                            hour: 'numeric',
                             minute: '2-digit',
-                            hour12: true 
+                            hour12: true
                           })
-                          
+
                           return { dayOfWeek, formattedDate, time }
                         }
                         const { dayOfWeek, formattedDate, time } = formatTimestamp(entry.timestamp)
-                        
+
                         return (
                           <motion.div
                             key={entry.id}
@@ -2122,8 +2122,8 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
                                     {entry.mood_tags && entry.mood_tags.length > 0 && (
                                       <div className="flex flex-wrap gap-1">
                                         {entry.mood_tags.map((tag: string, tagIdx: number) => (
-                                          <Badge 
-                                            key={tagIdx} 
+                                          <Badge
+                                            key={tagIdx}
                                             className={`text-xs ${tag === selectedMoodName ? 'bg-primary/20 text-primary border-primary/30' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'}`}
                                           >
                                             {getMoodEmoji(tag)} {tag}
@@ -2200,7 +2200,7 @@ function MoodContent({ patterns, dateFilterType, startDate, endDate, lastPeriodV
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.2, delay: index * 0.05 }}
                     >
-                      <Badge 
+                      <Badge
                         className={`bg-gradient-to-r ${getMoodColor(mood)} text-white text-sm cursor-pointer hover:scale-105 transition-transform duration-200 px-3 py-1`}
                         onClick={() => {
                           // Close the all moods modal and open the mood entries modal

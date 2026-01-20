@@ -6,16 +6,16 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
-import { 
-  Upload, 
-  FileAudio2, 
-  Loader2, 
-  CheckCircle, 
-  FileText, 
-  Pen, 
-  BookOpen, 
-  X, 
-  Edit3, 
+import {
+  Upload,
+  FileAudio2,
+  Loader2,
+  CheckCircle,
+  FileText,
+  Pen,
+  BookOpen,
+  X,
+  Edit3,
   Save,
   Play,
   Pause,
@@ -43,7 +43,7 @@ const viewModes = [
   },
   {
     icon: Pen,
-    title: "Enhanced Style", 
+    title: "Enhanced Style",
     description: "Improved grammar and tone while preserving your intent",
     gradient: "from-purple-500 to-pink-500",
     mode: "enhanced"
@@ -51,7 +51,7 @@ const viewModes = [
   {
     icon: BookOpen,
     title: "Structured Summary",
-    description: "Organized into coherent themes and key points", 
+    description: "Organized into coherent themes and key points",
     gradient: "from-emerald-500 to-teal-500",
     mode: "structured"
   }
@@ -60,7 +60,7 @@ const viewModes = [
 // Transcription-specific quirky loading messages
 const transcriptionMessages = [
   "Listening to your voice...",
-  "Decoding your audio waves...", 
+  "Decoding your audio waves...",
   "Converting speech to thoughts...",
   "Your voice is being transcribed...",
   "Turning audio into words...",
@@ -118,7 +118,7 @@ function VoiceUploadPage() {
   const [overlayContent, setOverlayContent] = useState('')
   const [overlayMode, setOverlayMode] = useState('')
   const [showUploadCard, setShowUploadCard] = useState(true)
-  
+
   // Backfill modal state
   const [showBackfillModal, setShowBackfillModal] = useState(false)
   const [backfillDate, setBackfillDate] = useState(() => {
@@ -137,7 +137,12 @@ function VoiceUploadPage() {
     return new Date().getHours() >= 12 ? 'PM' : 'AM'
   })
   const [showBackfillCalendar, setShowBackfillCalendar] = useState(false)
-  
+  const [showHourDropdown, setShowHourDropdown] = useState(false)
+  const [showMinuteDropdown, setShowMinuteDropdown] = useState(false)
+  const [useCustomDateTime, setUseCustomDateTime] = useState(false)
+  const [showCalendar, setShowCalendar] = useState(false)
+  const [entryDateTime, setEntryDateTime] = useState('')
+
   // Temporary state for calendar popup (before Apply)
   const [tempDate, setTempDate] = useState(() => {
     const today = new Date()
@@ -154,7 +159,7 @@ function VoiceUploadPage() {
   const [tempAmPm, setTempAmPm] = useState<'AM' | 'PM'>(() => {
     return new Date().getHours() >= 12 ? 'PM' : 'AM'
   })
-  
+
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
@@ -193,7 +198,7 @@ function VoiceUploadPage() {
     const selectedDateTime = new Date(`${backfillDate}T${getFormattedTime()}`)
     return selectedDateTime > new Date()
   }
-  
+
   // Check if temp date/time is in the future (for popup validation)
   const isTempTimeFuture = (): boolean => {
     if (!tempDate) return false
@@ -280,7 +285,7 @@ function VoiceUploadPage() {
     const todayDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const currentHour = now.getHours()
     const currentMinute = now.getMinutes()
-    
+
     setBackfillDate(todayDate)
     setTempDate(todayDate)
     setBackfillHour(currentHour > 12 ? currentHour - 12 : currentHour === 0 ? 12 : currentHour)
@@ -294,12 +299,12 @@ function VoiceUploadPage() {
   // Loading message cycling effect for processing (same as NewEntryPage)
   useEffect(() => {
     let interval: NodeJS.Timeout
-    
+
     if (isProcessing && !showResults) {
       // Cycle through processing messages (same as NewEntryPage)
       const processingMessages = [
         "Your memories are being created...",
-        "Your voice is heard...", 
+        "Your voice is heard...",
         "Weaving your thoughts together...",
         "AI is polishing your words...",
         "Crafting your story...",
@@ -309,16 +314,16 @@ function VoiceUploadPage() {
         "Processing your wisdom...",
         "Creating something beautiful..."
       ]
-      
+
       let messageIndex = 0
       setCurrentLoadingMessage(processingMessages[0])
-      
+
       interval = setInterval(() => {
         messageIndex = (messageIndex + 1) % processingMessages.length
         setCurrentLoadingMessage(processingMessages[messageIndex])
       }, 2000) // Change message every 2 seconds
     }
-    
+
     return () => {
       if (interval) clearInterval(interval)
     }
@@ -340,15 +345,15 @@ function VoiceUploadPage() {
   // Validate file format and size
   const validateFile = (file: File): string | null => {
     const extension = '.' + file.name.split('.').pop()?.toLowerCase()
-    
+
     if (!SUPPORTED_FORMATS.includes(extension)) {
       return `Unsupported file format. Please use one of: ${SUPPORTED_FORMATS.join(', ')}`
     }
-    
+
     if (file.size > MAX_FILE_SIZE) {
       return `File too large. Maximum size is ${MAX_FILE_SIZE / (1024 * 1024)}MB. Please break this into smaller parts.`
     }
-    
+
     return null
   }
 
@@ -374,7 +379,7 @@ function VoiceUploadPage() {
     setEditedTranscription('')
     setCreatedEntries(null)
     setProcessingMetadata(null)
-    
+
     // Create audio URL for preview
     if (audioUrl) {
       URL.revokeObjectURL(audioUrl)
@@ -410,7 +415,7 @@ function VoiceUploadPage() {
     setEditedTranscription('')
     setCreatedEntries(null)
     setProcessingMetadata(null)
-    
+
     // Create audio URL for preview
     if (audioUrl) {
       URL.revokeObjectURL(audioUrl)
@@ -424,13 +429,13 @@ function VoiceUploadPage() {
     let messageIndex = 0
     setCurrentLoadingMessage(transcriptionMessages[0])
     setTranscriptionProgress(0)
-    
+
     // Cycle loading messages
     loadingMessageIntervalRef.current = setInterval(() => {
       messageIndex = (messageIndex + 1) % transcriptionMessages.length
       setCurrentLoadingMessage(transcriptionMessages[messageIndex])
     }, 2000)
-    
+
     // Simulate progress
     let progress = 0
     progressIntervalRef.current = setInterval(() => {
@@ -460,30 +465,30 @@ function VoiceUploadPage() {
     setIsTranscribing(true)
     setError(null)
     startLoadingEffects()
-    
+
     try {
       // Create form data for file upload
       const formData = new FormData()
       formData.append('audio_file', selectedFile)
-      
+
       // Upload and transcribe the file
       const response = await api.uploadAndTranscribeAudio(formData)
-      
+
       if (response.success && response.data) {
         // Handle double-nested response structure
-        const actualData = response.data.data || response.data
+        const actualData = (response.data as any).data || response.data
         console.log('Actual transcription data:', actualData) // Debug log
         const result: TranscriptionResult = {
           transcription: actualData.transcription,
           duration: actualData.duration || 0,
           confidence: actualData.confidence
         }
-        
+
         setTranscriptionResult(result)
         setEditedTranscription(result.transcription)
         setShowTranscriptionCard(true)
         // Don't auto-open modal - let user click "View & Edit" button
-        
+
         safeToast({
           title: "✓ Transcription Complete!",
           description: "Your audio has been converted to text successfully.",
@@ -514,26 +519,26 @@ function VoiceUploadPage() {
     setShowModal(false)
     setShowTranscriptionCard(false)
     setShowUploadCard(false)
-    
+
     // Clear current results and hide existing cards
     setCreatedEntries(null)
     setProcessingMetadata(null)
     setShowResults(false)
-    
+
     // Small delay to ensure UI updates before showing loading
     setTimeout(() => {
       setIsProcessing(true)
     }, 100)
-    
+
     try {
       const response = await api.processTextOnly(
         editedTranscription?.trim() || '',
         ['raw', 'enhanced', 'structured']
       )
-      
+
       if (response.success && response.data) {
         const { results, raw_text } = response.data
-        
+
         // Extract processing metadata with priority: structured > enhanced > raw
         let metadata = null
         if (results.structured?.processing_metadata) {
@@ -543,7 +548,7 @@ function VoiceUploadPage() {
         } else if (results.raw?.processing_metadata) {
           metadata = results.raw.processing_metadata
         }
-        
+
         setProcessingMetadata(metadata)
         setCreatedEntries({
           raw: {
@@ -560,7 +565,7 @@ function VoiceUploadPage() {
             structured_summary: results.structured.processed_text
           } : undefined
         })
-        
+
         // Show results immediately (like NewEntryPage)
         setCurrentReviewTip(getRandomReviewTip())  // Set tip once before showing results
         setShowResults(true)
@@ -606,12 +611,12 @@ function VoiceUploadPage() {
           title: "✨ Entry saved to diary!",
           description: "Your voice note has been added to your journal.",
         })
-        
+
         // Redirect to view entries page to see the saved entry
         setTimeout(() => {
           navigate('/entries')
         }, 1000)
-        
+
         // Trigger mood analysis in background if enhanced text is available
         if (createdEntry.id && createdEntries.enhanced?.enhanced_text) {
           try {
@@ -628,24 +633,24 @@ function VoiceUploadPage() {
             // Don't show error toast - mood analysis is supplementary
           }
         }
-        
+
         // Reset state (like NewEntryPage)
         setSelectedFile(null)
         setTranscriptionResult(null)
         setEditedTranscription('')
         setCreatedEntries(null)
-    setProcessingMetadata(null)
+        setProcessingMetadata(null)
         setShowModal(false)
         setShowResults(false)
         setShowTranscriptionCard(false)
         setShowUploadCard(true)
-        
+
         // Reset backfill date/time to current values
         const now = new Date()
         const todayDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
         const currentHour = now.getHours()
         const currentMinute = now.getMinutes()
-        
+
         setBackfillDate(todayDate)
         setTempDate(todayDate)
         setBackfillHour(currentHour > 12 ? currentHour - 12 : currentHour === 0 ? 12 : currentHour)
@@ -677,7 +682,7 @@ function VoiceUploadPage() {
   // Toggle audio playback
   const togglePlayback = () => {
     if (!audioRef.current) return
-    
+
     if (isPlaying) {
       audioRef.current.pause()
       setIsPlaying(false)
@@ -702,7 +707,7 @@ function VoiceUploadPage() {
     } else if (mode === 'structured' && createdEntries?.structured) {
       content = createdEntries.structured.structured_summary
     }
-    
+
     setOverlayContent(content)
     setOverlayMode(mode)
     setShowOverlay(true)
@@ -711,9 +716,9 @@ function VoiceUploadPage() {
   // Handle save edit
   const handleSaveEdit = () => {
     if (!createdEntries) return
-    
+
     const updatedEntries = { ...createdEntries }
-    
+
     if (overlayMode === 'raw' && updatedEntries.raw) {
       updatedEntries.raw.raw_text = overlayContent
     } else if (overlayMode === 'enhanced' && updatedEntries.enhanced) {
@@ -721,7 +726,7 @@ function VoiceUploadPage() {
     } else if (overlayMode === 'structured' && updatedEntries.structured) {
       updatedEntries.structured.structured_summary = overlayContent
     }
-    
+
     setCreatedEntries(updatedEntries)
     setShowOverlay(false)
     setOverlayContent('')
@@ -738,780 +743,774 @@ function VoiceUploadPage() {
     <>
       <div className="h-screen flex flex-col p-4 md:p-6 overflow-hidden relative">
         <div className="max-w-6xl mx-auto w-full flex flex-col flex-1">
-        {/* Header - Always shown */}
-        <div className="flex items-center justify-between mb-4 min-h-[40px]">
-          <h2 className="text-2xl font-bold text-white">Voice Upload</h2>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {!transcriptionResult && (
-              <p className="text-gray-400 text-sm">
-                Upload and transcribe your voice notes from offline recordings
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Upload Area */}
-        {showUploadCard && (
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50 mb-4">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-                <FileAudio2 className="h-3.5 w-3.5 text-white" />
-              </div>
-              <div>
-                <CardTitle className="text-white text-lg">Upload Audio File</CardTitle>
-                <CardDescription className="text-gray-400 text-sm">
-                  Select or drag your voice recording to get started
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {/* File Upload Area */}
-            <div
-              className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                error ? 'border-red-500/50 bg-red-500/5' : 'border-border/50 hover:border-primary/50 hover:bg-primary/5'
-              }`}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".wav,.mp3,.m4a,.aac,.ogg,.flac,.webm"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              
-              {selectedFile ? (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-center">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-                      <FileAudio2 className="h-6 w-6 text-white" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-white font-medium">{selectedFile.name}</p>
-                    <p className="text-gray-400 text-sm">
-                      {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
-                    </p>
-                  </div>
-                  
-                  {/* Action Buttons - All in one line */}
-                  <div className="flex items-center justify-between gap-2">
-                    {/* Choose File - Left */}
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="relative overflow-hidden group px-3 py-2 rounded-md font-medium shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 w-[120px]"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      <span className="relative z-10 text-primary font-medium group-hover:text-primary transition-colors duration-300 flex items-center whitespace-nowrap text-sm">
-                        <Upload className="mr-2 h-3 w-3" />
-                        Choose File
-                      </span>
-                    </button>
-                    
-                    {/* Audio Preview - Center */}
-                    {audioUrl && (
-                      <button
-                        onClick={togglePlayback}
-                        className="relative overflow-hidden group px-3 py-2 rounded-md font-medium shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 w-[100px]"
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        <span className="relative z-10 text-primary font-medium group-hover:text-primary transition-colors duration-300 flex items-center text-sm">
-                          {isPlaying ? (
-                            <>
-                              <Pause className="mr-2 h-3 w-3" />
-                              Pause
-                            </>
-                          ) : (
-                            <>
-                              <Play className="mr-2 h-3 w-3" />
-                              Preview
-                            </>
-                          )}
-                        </span>
-                      </button>
-                    )}
-                    
-                    {/* Transcribe - Right */}
-                    <button
-                      onClick={handleTranscribe}
-                      disabled={isTranscribing}
-                      className="relative overflow-hidden group px-3 py-2 rounded-md font-medium shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 w-[120px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      <span className="relative z-10 text-primary font-medium group-hover:text-primary transition-colors duration-300 flex items-center text-sm">
-                        {isTranscribing ? (
-                          <>
-                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                            Transcribing...
-                          </>
-                        ) : (
-                          <>
-                            <Mic className="mr-2 h-3 w-3" />
-                            Transcribe
-                          </>
-                        )}
-                      </span>
-                    </button>
-                  </div>
-                  
-                  {/* Hidden Audio Element */}
-                  {audioUrl && (
-                    <audio
-                      ref={audioRef}
-                      src={audioUrl}
-                      onEnded={handleAudioEnded}
-                      className="hidden"
-                    />
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-center">
-                    <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
-                      <Upload className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-white font-medium mb-2">Drop your audio file here</p>
-                    <p className="text-gray-400 text-sm mb-4">
-                      or click to browse your files
-                    </p>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="relative overflow-hidden group px-8 py-3 rounded-md font-medium shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      <span className="relative z-10 text-primary font-medium group-hover:text-primary transition-colors duration-300">
-                        Choose File
-                      </span>
-                    </button>
-                  </div>
-                </div>
+          {/* Header - Always shown */}
+          <div className="flex items-center justify-between mb-4 min-h-[40px]">
+            <h2 className="text-2xl font-bold text-white">Voice Upload</h2>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {!transcriptionResult && (
+                <p className="text-gray-400 text-sm">
+                  Upload and transcribe your voice notes from offline recordings
+                </p>
               )}
             </div>
+          </div>
 
-            {/* Error Display */}
-            {error && (
-              <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-red-400" />
-                <p className="text-red-400 text-sm">{error}</p>
-              </div>
-            )}
+          {/* Upload Area */}
+          {showUploadCard && (
+            <Card className="bg-card/50 backdrop-blur-sm border-border/50 mb-4">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+                    <FileAudio2 className="h-3.5 w-3.5 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-white text-lg">Upload Audio File</CardTitle>
+                    <CardDescription className="text-gray-400 text-sm">
+                      Select or drag your voice recording to get started
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {/* File Upload Area */}
+                <div
+                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${error ? 'border-red-500/50 bg-red-500/5' : 'border-border/50 hover:border-primary/50 hover:bg-primary/5'
+                    }`}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".wav,.mp3,.m4a,.aac,.ogg,.flac,.webm"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
 
-            {/* Supported Formats */}
-            <div className="mt-4 text-center">
-              <p className="text-gray-400 text-xs">
-                Supported formats: {SUPPORTED_FORMATS.join(', ')} • Max size: {MAX_FILE_SIZE / (1024 * 1024)}MB
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        )}
-
-        {/* Transcription Status - Single Container to Prevent Layout Shift */}
-        {!showResults && (
-        <div className="mb-6 min-h-[120px]">
-          <AnimatePresence mode="wait">
-            {isTranscribing && (
-              <motion.div
-                key="progress"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2, ease: "easeInOut" }}
-              >
-                <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-                  <CardContent className="pt-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                        <div>
-                          <p className="text-white font-medium">Transcribing Your Audio</p>
-                          <p className="text-gray-400 text-sm">{currentLoadingMessage}</p>
+                  {selectedFile ? (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+                          <FileAudio2 className="h-6 w-6 text-white" />
                         </div>
                       </div>
-                      <Progress value={transcriptionProgress} className="h-2" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-            
-            {transcriptionResult && !showModal && showTranscriptionCard && (
-              <motion.div
-                key="success"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2, ease: "easeInOut" }}
-              >
-                <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-                  <CardContent className="pt-4">
-                  <div className="space-y-3">
-                    {/* Success Header */}
-                    <div className="flex items-center gap-3 mb-3">
-                      <CheckCircle className="h-5 w-5 text-green-500" />
                       <div>
-                        <p className="text-white font-medium">Transcription Complete!</p>
+                        <p className="text-white font-medium">{selectedFile.name}</p>
                         <p className="text-gray-400 text-sm">
-                          {transcriptionResult.duration ? `${Math.round(transcriptionResult.duration)}s audio processed` : 'Audio processed successfully'}
+                          {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
                         </p>
                       </div>
+
+                      {/* Action Buttons - All in one line */}
+                      <div className="flex items-center justify-between gap-2">
+                        {/* Choose File - Left */}
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="relative overflow-hidden group px-3 py-2 rounded-md font-medium shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 w-[120px]"
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          <span className="relative z-10 text-primary font-medium group-hover:text-primary transition-colors duration-300 flex items-center whitespace-nowrap text-sm">
+                            <Upload className="mr-2 h-3 w-3" />
+                            Choose File
+                          </span>
+                        </button>
+
+                        {/* Audio Preview - Center */}
+                        {audioUrl && (
+                          <button
+                            onClick={togglePlayback}
+                            className="relative overflow-hidden group px-3 py-2 rounded-md font-medium shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 w-[100px]"
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            <span className="relative z-10 text-primary font-medium group-hover:text-primary transition-colors duration-300 flex items-center text-sm">
+                              {isPlaying ? (
+                                <>
+                                  <Pause className="mr-2 h-3 w-3" />
+                                  Pause
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="mr-2 h-3 w-3" />
+                                  Preview
+                                </>
+                              )}
+                            </span>
+                          </button>
+                        )}
+
+                        {/* Transcribe - Right */}
+                        <button
+                          onClick={handleTranscribe}
+                          disabled={isTranscribing}
+                          className="relative overflow-hidden group px-3 py-2 rounded-md font-medium shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 w-[120px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          <span className="relative z-10 text-primary font-medium group-hover:text-primary transition-colors duration-300 flex items-center text-sm">
+                            {isTranscribing ? (
+                              <>
+                                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                Transcribing...
+                              </>
+                            ) : (
+                              <>
+                                <Mic className="mr-2 h-3 w-3" />
+                                Transcribe
+                              </>
+                            )}
+                          </span>
+                        </button>
+                      </div>
+
+                      {/* Hidden Audio Element */}
+                      {audioUrl && (
+                        <audio
+                          ref={audioRef}
+                          src={audioUrl}
+                          onEnded={handleAudioEnded}
+                          className="hidden"
+                        />
+                      )}
                     </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
+                          <Upload className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-white font-medium mb-2">Drop your audio file here</p>
+                        <p className="text-gray-400 text-sm mb-4">
+                          or click to browse your files
+                        </p>
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="relative overflow-hidden group px-8 py-3 rounded-md font-medium shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20"
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          <span className="relative z-10 text-primary font-medium group-hover:text-primary transition-colors duration-300">
+                            Choose File
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Error Display */}
+                {error && (
+                  <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-red-400" />
+                    <p className="text-red-400 text-sm">{error}</p>
+                  </div>
+                )}
+
+                {/* Supported Formats */}
+                <div className="mt-4 text-center">
+                  <p className="text-gray-400 text-xs">
+                    Supported formats: {SUPPORTED_FORMATS.join(', ')} • Max size: {MAX_FILE_SIZE / (1024 * 1024)}MB
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Transcription Status - Single Container to Prevent Layout Shift */}
+          {!showResults && (
+            <div className="mb-6 min-h-[120px]">
+              <AnimatePresence mode="wait">
+                {isTranscribing && (
+                  <motion.div
+                    key="progress"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                  >
+                    <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+                      <CardContent className="pt-6">
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-3">
+                            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                            <div>
+                              <p className="text-white font-medium">Transcribing Your Audio</p>
+                              <p className="text-gray-400 text-sm">{currentLoadingMessage}</p>
+                            </div>
+                          </div>
+                          <Progress value={transcriptionProgress} className="h-2" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+
+                {transcriptionResult && !showModal && showTranscriptionCard && (
+                  <motion.div
+                    key="success"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                  >
+                    <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+                      <CardContent className="pt-4">
+                        <div className="space-y-3">
+                          {/* Success Header */}
+                          <div className="flex items-center gap-3 mb-3">
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                            <div>
+                              <p className="text-white font-medium">Transcription Complete!</p>
+                              <p className="text-gray-400 text-sm">
+                                {transcriptionResult.duration ? `${Math.round(transcriptionResult.duration)}s audio processed` : 'Audio processed successfully'}
+                              </p>
+                            </div>
+                          </div>
 
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-3 justify-center">
-                      <button
-                        onClick={() => setShowModal(true)}
-                        className="relative overflow-hidden group px-8 py-3 rounded-md font-medium shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20"
+                          {/* Action Buttons */}
+                          <div className="flex gap-3 justify-center">
+                            <button
+                              onClick={() => setShowModal(true)}
+                              className="relative overflow-hidden group px-8 py-3 rounded-md font-medium shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20"
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                              <span className="relative z-10 text-primary font-medium group-hover:text-primary transition-colors duration-300 flex items-center">
+                                <Eye className="mr-2 h-4 w-4" />
+                                View & Edit Transcription
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {/* Transcription Modal */}
+          <AnimatePresence>
+            {showModal && transcriptionResult && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+                onClick={() => setShowModal(false)}
+              >
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-card/90 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl max-w-6xl w-full max-h-[92vh] min-h-[600px] flex flex-col overflow-hidden mx-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Modal Header */}
+                  <div className="px-6 py-4 border-b border-border/50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+                          <FileText className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-white">Transcription Result</h3>
+                          <p className="text-sm text-gray-400">
+                            {transcriptionResult.duration ? `${Math.round(transcriptionResult.duration)}s audio` : ''}
+                            {transcriptionResult.confidence && ` • ${Math.round(transcriptionResult.confidence * 100)}% confidence`}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setShowModal(false)
+                          setShowUploadCard(true)
+                        }}
+                        className="h-8 w-8 p-0 text-blue-300 drop-shadow-[0_0_4px_rgba(147,197,253,0.6)] hover:bg-muted/50 hover:text-white hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.6)]"
+                        title="Close modal"
                       >
-                        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        <span className="relative z-10 text-primary font-medium group-hover:text-primary transition-colors duration-300 flex items-center">
-                          <Eye className="mr-2 h-4 w-4" />
-                          View & Edit Transcription
-                        </span>
-                      </button>
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+
+                  {/* Modal Content */}
+                  <div className="flex-1 overflow-y-auto p-6">
+                    <div className="space-y-6">
+                      {/* Transcription Text Area */}
+                      <div>
+                        <Textarea
+                          value={editedTranscription}
+                          onChange={(e) => setEditedTranscription(e.target.value)}
+                          placeholder="Your transcribed text will appear here..."
+                          className="min-h-[400px] bg-background/50 border-border text-white placeholder:text-gray-400 resize-none"
+                        />
+                      </div>
+
+                      {/* Process Button */}
+                      <div className="flex justify-center">
+                        <button
+                          onClick={handleProcessEntry}
+                          disabled={!editedTranscription?.trim() || isProcessing}
+                          className="relative overflow-hidden group px-8 py-3 rounded-md font-medium shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          <span className="relative z-10 text-primary font-medium group-hover:text-primary transition-colors duration-300 flex items-center">
+                            {isProcessing ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Sparkles className="mr-2 h-4 w-4" />
+                            )}
+                            Process Entries
+                          </span>
+                        </button>
+                      </div>
+
+                      {/* Processed Results */}
+                      <AnimatePresence>
+                        {createdEntries && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="space-y-4"
+                          >
+                            <div className="grid gap-4">
+                              {viewModes.map((mode, index) => {
+
+
+                                const content = mode.mode === 'raw' ? createdEntries.raw.raw_text :
+                                  mode.mode === 'enhanced' ? createdEntries.enhanced?.enhanced_text :
+                                    createdEntries.structured?.structured_summary
+
+                                return (
+                                  <motion.div
+                                    key={mode.mode}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                  >
+                                    <Card className="bg-card/30 backdrop-blur-sm border-border/30">
+                                      <CardHeader className="pb-3">
+                                        <div className="flex items-center gap-3">
+                                          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${mode.gradient} flex items-center justify-center`}>
+                                            <mode.icon className="h-4 w-4 text-white" />
+                                          </div>
+                                          <div>
+                                            <CardTitle className="text-base text-white">{mode.title}</CardTitle>
+                                            <CardDescription className="text-xs text-gray-400">
+                                              {mode.description}
+                                            </CardDescription>
+                                          </div>
+                                        </div>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
+                                          {content}
+                                        </p>
+                                      </CardContent>
+                                    </Card>
+                                  </motion.div>
+                                )
+                              })}
+                            </div>
+
+                            {/* Save Button */}
+                            <div className="flex justify-center pt-4">
+                              <Button
+                                onClick={handleSaveEntries}
+                                className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white border-0 px-8"
+                              >
+                                <Save className="mr-2 h-4 w-4" />
+                                Add to Boo
+                              </Button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
             )}
           </AnimatePresence>
-        </div>
-        )}
 
-        {/* Transcription Modal */}
-        <AnimatePresence>
-          {showModal && transcriptionResult && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
-              onClick={() => setShowModal(false)}
-            >
+          {/* Loading State and Results - Wrapped in single AnimatePresence with wait mode */}
+          <AnimatePresence mode="wait">
+            {isProcessing && !showResults ? (
               <motion.div
+                key="loading"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.3 }}
-                className="bg-card/90 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl max-w-6xl w-full max-h-[92vh] min-h-[600px] flex flex-col overflow-hidden mx-auto"
-                onClick={(e) => e.stopPropagation()}
+                transition={{ duration: 0.4, ease: "easeInOut" }}
+                className="flex-1 flex items-center justify-center px-4"
               >
-                {/* Modal Header */}
-                <div className="px-6 py-4 border-b border-border/50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-                        <FileText className="h-4 w-4 text-white" />
-                      </div>
+                <div className="text-center space-y-6 max-w-md mx-auto">
+                  <motion.div
+                    animate={{
+                      rotate: 360,
+                      scale: [1, 1.1, 1]
+                    }}
+                    transition={{
+                      rotate: { duration: 2, repeat: Infinity, ease: "linear" },
+                      scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                    }}
+                  >
+                    <Sparkles className="w-16 h-16 text-primary mx-auto" />
+                  </motion.div>
+
+                  <motion.p
+                    key={currentLoadingMessage}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-xl text-white font-medium"
+                  >
+                    {currentLoadingMessage}
+                  </motion.p>
+                </div>
+              </motion.div>
+            ) : showResults && createdEntries &&
+              createdEntries.raw?.raw_text &&
+              createdEntries.enhanced?.enhanced_text &&
+              createdEntries.structured?.structured_summary ? (
+              <motion.div
+                key="results"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="flex-1 flex flex-col overflow-visible"
+              >
+                {/* AI Processing Tip */}
+                <div className="mb-6 relative overflow-hidden rounded-lg">
+                  <motion.div
+                    initial={{ x: "-100%" }}
+                    animate={{ x: 0 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                    className="p-4 bg-yellow-400/5 border border-yellow-400/30 rounded-lg"
+                  >
+                    <div className="flex items-start gap-3">
+                      <Lightbulb className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)] animate-pulse" />
                       <div>
-                        <h3 className="text-lg font-semibold text-white">Transcription Result</h3>
-                        <p className="text-sm text-gray-400">
-                          {transcriptionResult.duration ? `${Math.round(transcriptionResult.duration)}s audio` : ''}
-                          {transcriptionResult.confidence && ` • ${Math.round(transcriptionResult.confidence * 100)}% confidence`}
+                        <p className="text-sm text-yellow-200 font-medium mb-1">
+                          Review Before Saving
+                        </p>
+                        <p className="text-xs text-gray-300">
+                          {currentReviewTip}
                         </p>
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setShowModal(false)
-                        setShowUploadCard(true)
-                      }}
-                      className="h-8 w-8 p-0 text-blue-300 drop-shadow-[0_0_4px_rgba(147,197,253,0.6)] hover:bg-muted/50 hover:text-white hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.6)]"
-                      title="Close modal"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  </motion.div>
                 </div>
 
-                {/* Modal Content */}
-                <div className="flex-1 overflow-y-auto p-6">
-                  <div className="space-y-6">
-                    {/* Transcription Text Area */}
-                    <div>
-                      <Textarea
-                        value={editedTranscription}
-                        onChange={(e) => setEditedTranscription(e.target.value)}
-                        placeholder="Your transcribed text will appear here..."
-                        className="min-h-[400px] bg-background/50 border-border text-white placeholder:text-gray-400 resize-none"
-                      />
-                    </div>
+                <div className="grid md:grid-cols-3 gap-6 flex-1 mb-6">
+                  {viewModes.map((mode, index) => {
+                    let content = ''
+                    let hasContent = false
 
-                    {/* Process Button */}
-                    <div className="flex justify-center">
-                      <button
-                        onClick={handleProcessEntry}
-                        disabled={!editedTranscription?.trim() || isProcessing}
-                        className="relative overflow-hidden group px-8 py-3 rounded-md font-medium shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        <span className="relative z-10 text-primary font-medium group-hover:text-primary transition-colors duration-300 flex items-center">
-                          {isProcessing ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Sparkles className="mr-2 h-4 w-4" />
-                          )}
-                          Process Entries
-                        </span>
-                      </button>
-                    </div>
+                    if (mode.mode === 'raw' && createdEntries.raw) {
+                      content = createdEntries.raw.raw_text
+                      hasContent = true
+                    } else if (mode.mode === 'enhanced' && createdEntries.enhanced) {
+                      content = createdEntries.enhanced.enhanced_text
+                      hasContent = true
+                    } else if (mode.mode === 'structured' && createdEntries.structured) {
+                      content = createdEntries.structured.structured_summary
+                      hasContent = true
+                    }
 
-                    {/* Processed Results */}
-                    <AnimatePresence>
-                      {createdEntries && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -20 }}
-                          className="space-y-4"
-                        >
-                          <div className="grid gap-4">
-                            {viewModes.map((mode, index) => {
-                              const entry = mode.mode === 'raw' ? createdEntries.raw :
-                                           mode.mode === 'enhanced' ? createdEntries.enhanced :
-                                           createdEntries.structured
-                              
-                              if (!entry) return null
+                    // Truncate text to fit without scroll - estimate ~500 chars for good fit
+                    const displayContent = hasContent ? truncateText(content, 500) : 'Processing...'
 
-                              const content = mode.mode === 'raw' ? entry.raw_text :
-                                            mode.mode === 'enhanced' ? entry.enhanced_text :
-                                            entry.structured_summary
-
-                              return (
-                                <motion.div
-                                  key={mode.mode}
-                                  initial={{ opacity: 0, y: 20 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ delay: index * 0.1 }}
-                                >
-                                  <Card className="bg-card/30 backdrop-blur-sm border-border/30">
-                                    <CardHeader className="pb-3">
-                                      <div className="flex items-center gap-3">
-                                        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${mode.gradient} flex items-center justify-center`}>
-                                          <mode.icon className="h-4 w-4 text-white" />
-                                        </div>
-                                        <div>
-                                          <CardTitle className="text-base text-white">{mode.title}</CardTitle>
-                                          <CardDescription className="text-xs text-gray-400">
-                                            {mode.description}
-                                          </CardDescription>
-                                        </div>
-                                      </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                      <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
-                                        {content}
-                                      </p>
-                                    </CardContent>
-                                  </Card>
-                                </motion.div>
-                              )
-                            })}
-                          </div>
-
-                          {/* Save Button */}
-                          <div className="flex justify-center pt-4">
-                            <Button
-                              onClick={handleSaveEntries}
-                              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white border-0 px-8"
-                            >
-                              <Save className="mr-2 h-4 w-4" />
-                              Add to Boo
-                            </Button>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Loading State and Results - Wrapped in single AnimatePresence with wait mode */}
-        <AnimatePresence mode="wait">
-          {isProcessing && !showResults ? (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.4, ease: "easeInOut" }}
-              className="flex-1 flex items-center justify-center px-4"
-            >
-              <div className="text-center space-y-6 max-w-md mx-auto">
-                <motion.div
-                  animate={{ 
-                    rotate: 360,
-                    scale: [1, 1.1, 1]
-                  }}
-                  transition={{ 
-                    rotate: { duration: 2, repeat: Infinity, ease: "linear" },
-                    scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
-                  }}
-                >
-                  <Sparkles className="w-16 h-16 text-primary mx-auto" />
-                </motion.div>
-                
-                <motion.p
-                  key={currentLoadingMessage}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.5 }}
-                  className="text-xl text-white font-medium"
-                >
-                  {currentLoadingMessage}
-                </motion.p>
-              </div>
-            </motion.div>
-          ) : showResults && createdEntries && 
-           createdEntries.raw?.raw_text && 
-           createdEntries.enhanced?.enhanced_text && 
-           createdEntries.structured?.structured_summary ? (
-            <motion.div
-              key="results"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              className="flex-1 flex flex-col overflow-visible"
-            >
-              {/* AI Processing Tip */}
-              <div className="mb-6 relative overflow-hidden rounded-lg">
-                <motion.div
-                  initial={{ x: "-100%" }}
-                  animate={{ x: 0 }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  className="p-4 bg-yellow-400/5 border border-yellow-400/30 rounded-lg"
-                >
-                <div className="flex items-start gap-3">
-                  <Lightbulb className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)] animate-pulse" />
-                  <div>
-                    <p className="text-sm text-yellow-200 font-medium mb-1">
-                      Review Before Saving
-                    </p>
-                    <p className="text-xs text-gray-300">
-                      {currentReviewTip}
-                    </p>
-                  </div>
-                </div>
-                </motion.div>
-              </div>
-              
-              <div className="grid md:grid-cols-3 gap-6 flex-1 mb-6">
-                {viewModes.map((mode, index) => {
-                  let content = ''
-                  let hasContent = false
-                  
-                  if (mode.mode === 'raw' && createdEntries.raw) {
-                    content = createdEntries.raw.raw_text
-                    hasContent = true
-                  } else if (mode.mode === 'enhanced' && createdEntries.enhanced) {
-                    content = createdEntries.enhanced.enhanced_text
-                    hasContent = true
-                  } else if (mode.mode === 'structured' && createdEntries.structured) {
-                    content = createdEntries.structured.structured_summary
-                    hasContent = true
-                  }
-                  
-                  // Truncate text to fit without scroll - estimate ~500 chars for good fit
-                  const displayContent = hasContent ? truncateText(content, 500) : 'Processing...'
-                  
-                  return (
-                    <motion.div
-                      key={mode.mode}
-                      initial={{ opacity: 0, y: 30, scale: 0.9 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ 
-                        duration: 0.5, 
-                        delay: index * 0.1,
-                        type: "spring",
-                        stiffness: 300,
-                        damping: 24
-                      }}
-                      whileHover={{ 
-                        y: -6,
-                        scale: 1.015,
-                        transition: {
+                    return (
+                      <motion.div
+                        key={mode.mode}
+                        initial={{ opacity: 0, y: 30, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{
+                          duration: 0.5,
+                          delay: index * 0.1,
                           type: "spring",
-                          stiffness: 400,
-                          damping: 10
-                        }
-                      }}
-                    >
-                      <Card 
-                        className="h-full bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30 transition-all duration-300 overflow-hidden group relative cursor-pointer"
-                        onClick={() => handleCardEdit(mode.mode)}
+                          stiffness: 300,
+                          damping: 24
+                        }}
+                        whileHover={{
+                          y: -6,
+                          scale: 1.015,
+                          transition: {
+                            type: "spring",
+                            stiffness: 400,
+                            damping: 10
+                          }
+                        }}
                       >
-                        {/* Gradient overlay */}
-                        <div className={`absolute inset-0 bg-gradient-to-br ${mode.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
-                        
-                        {/* Shimmer effect */}
-                        <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:translate-x-full transition-transform duration-700" />
-                        
-                        <CardHeader className="pb-2 relative">
-                          <motion.div 
-                            className={`w-12 h-12 rounded-xl bg-gradient-to-br ${mode.gradient} flex items-center justify-center mb-4 shadow-lg shadow-primary/20 relative`}
-                            whileHover={{ 
-                              scale: 1.1,
-                              rotate: 5
-                            }}
-                            transition={{ type: "spring", stiffness: 300, damping: 10 }}
-                          >
-                            <mode.icon className="h-6 w-6 text-white" />
-                            <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${mode.gradient} opacity-10`} />
-                          </motion.div>
-                          
-                          <div className="flex items-center justify-between mb-1">
-                            <CardTitle className="text-lg font-bold text-white group-hover:text-primary transition-colors duration-300">
-                              {mode.title}
-                            </CardTitle>
-                            <div 
-                              className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleCardEdit(mode.mode)
+                        <Card
+                          className="h-full bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30 transition-all duration-300 overflow-hidden group relative cursor-pointer"
+                          onClick={() => handleCardEdit(mode.mode)}
+                        >
+                          {/* Gradient overlay */}
+                          <div className={`absolute inset-0 bg-gradient-to-br ${mode.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
+
+                          {/* Shimmer effect */}
+                          <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:translate-x-full transition-transform duration-700" />
+
+                          <CardHeader className="pb-2 relative">
+                            <motion.div
+                              className={`w-12 h-12 rounded-xl bg-gradient-to-br ${mode.gradient} flex items-center justify-center mb-4 shadow-lg shadow-primary/20 relative`}
+                              whileHover={{
+                                scale: 1.1,
+                                rotate: 5
                               }}
+                              transition={{ type: "spring", stiffness: 300, damping: 10 }}
                             >
-                              <div className="bg-primary/20 backdrop-blur-sm rounded-full p-1.5 border border-primary/30 hover:bg-primary/30 transition-colors">
-                                <Edit3 className="h-3.5 w-3.5 text-primary" />
+                              <mode.icon className="h-6 w-6 text-white" />
+                              <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${mode.gradient} opacity-10`} />
+                            </motion.div>
+
+                            <div className="flex items-center justify-between mb-1">
+                              <CardTitle className="text-lg font-bold text-white group-hover:text-primary transition-colors duration-300">
+                                {mode.title}
+                              </CardTitle>
+                              <div
+                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleCardEdit(mode.mode)
+                                }}
+                              >
+                                <div className="bg-primary/20 backdrop-blur-sm rounded-full p-1.5 border border-primary/30 hover:bg-primary/30 transition-colors">
+                                  <Edit3 className="h-3.5 w-3.5 text-primary" />
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <CardDescription className="text-gray-400 text-xs leading-tight mb-3">
-                            {mode.description}
-                          </CardDescription>
-                        </CardHeader>
-                        
-                        <CardContent className="relative flex-1 pt-0">
-                          <div className="bg-muted/20 rounded-lg p-4 h-full min-h-[280px] flex flex-col">
-                            <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap flex-1">
-                              {displayContent}
-                            </p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  )
-                })}
-              </div>
-              
-              {/* Action Buttons */}
-              <div className="flex justify-center gap-4">
-                {/* Back to Edit Button */}
-                <motion.button
-                  onClick={() => {
-                    // Clear processed results and go back to raw transcription state
-                    setCreatedEntries(null)
-    setProcessingMetadata(null)
-                    setShowResults(false)
-                    setShowModal(true)
-                  }}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="relative overflow-hidden group px-6 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-gray-500/10 border border-gray-500/20 text-gray-400 hover:bg-gray-500/20 hover:text-gray-300"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-gray-500/10 to-gray-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <span className="relative z-10 font-semibold transition-colors duration-300 flex items-center">
-                    <Edit3 className="mr-2 h-5 w-5" />
-                    Back to Edit
-                  </span>
-                </motion.button>
+                            <CardDescription className="text-gray-400 text-xs leading-tight mb-3">
+                              {mode.description}
+                            </CardDescription>
+                          </CardHeader>
 
-                {/* Add to Boo Button */}
-                <motion.button
-                  onClick={handleSaveEntries}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.4 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="relative overflow-hidden group px-8 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <span className="relative z-10 text-primary font-semibold group-hover:text-primary transition-colors duration-300 flex items-center">
-                    <BookOpen className="mr-2 h-5 w-5" />
-                    Add to Boo
-                  </span>
-                </motion.button>
+                          <CardContent className="relative flex-1 pt-0">
+                            <div className="bg-muted/20 rounded-lg p-4 h-full min-h-[280px] flex flex-col">
+                              <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap flex-1">
+                                {displayContent}
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    )
+                  })}
+                </div>
 
-                {/* Start Over Button */}
-                <motion.button
-                  onClick={() => {
-                    setSelectedFile(null)
-                    setTranscriptionResult(null)
-                    setEditedTranscription('')
-                    setCreatedEntries(null)
-    setProcessingMetadata(null)
-                    setShowModal(false)
-                    setShowResults(false)
-                    setShowTranscriptionCard(false)
-                    setShowUploadCard(true)
-                    setUseCustomDateTime(false)
-                    setShowCalendar(false)
-                    setEntryDateTime(new Date().toISOString().slice(0, 16))
-                    if (audioUrl) {
-                      URL.revokeObjectURL(audioUrl)
-                      setAudioUrl(null)
-                    }
-                    if (fileInputRef.current) {
-                      fileInputRef.current.value = ''
-                    }
-                  }}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.5 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="relative overflow-hidden group px-6 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-gray-500/10 border border-gray-500/20 text-gray-400 hover:bg-gray-500/20 hover:text-gray-300"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-gray-500/10 to-gray-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <span className="relative z-10 font-semibold transition-colors duration-300 flex items-center">
-                    <Plus className="mr-2 h-5 w-5" />
-                    Start Over
-                  </span>
-                </motion.button>
+                {/* Action Buttons */}
+                <div className="flex justify-center gap-4">
+                  {/* Back to Edit Button */}
+                  <motion.button
+                    onClick={() => {
+                      // Clear processed results and go back to raw transcription state
+                      setCreatedEntries(null)
+                      setProcessingMetadata(null)
+                      setShowResults(false)
+                      setShowModal(true)
+                    }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="relative overflow-hidden group px-6 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-gray-500/10 border border-gray-500/20 text-gray-400 hover:bg-gray-500/20 hover:text-gray-300"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-gray-500/10 to-gray-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <span className="relative z-10 font-semibold transition-colors duration-300 flex items-center">
+                      <Edit3 className="mr-2 h-5 w-5" />
+                      Back to Edit
+                    </span>
+                  </motion.button>
 
-                {/* Backfill Entry Button */}
-                <motion.button
-                  onClick={() => {
-                    // Reset to current date/time when opening modal
-                    const now = new Date()
-                    const todayDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-                    const currentHour = now.getHours()
-                    const currentMinute = now.getMinutes()
-                    
-                    setBackfillDate(todayDate)
-                    setBackfillHour(currentHour > 12 ? currentHour - 12 : currentHour === 0 ? 12 : currentHour)
-                    setBackfillMinute(currentMinute)
-                    setBackfillAmPm(currentHour >= 12 ? 'PM' : 'AM')
-                    
-                    setTempDate(todayDate)
-                    setTempHour(currentHour > 12 ? currentHour - 12 : currentHour === 0 ? 12 : currentHour)
-                    setTempMinute(currentMinute)
-                    setTempAmPm(currentHour >= 12 ? 'PM' : 'AM')
-                    
-                    setShowBackfillModal(true)
-                  }}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.6 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="relative overflow-hidden group px-6 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-blue-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <span className="relative z-10 font-semibold transition-colors duration-300 flex items-center">
-                    <Calendar className="mr-2 h-5 w-5" />
-                    Choose Date & Time
-                  </span>
-                </motion.button>
-              </div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
+                  {/* Add to Boo Button */}
+                  <motion.button
+                    onClick={handleSaveEntries}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="relative overflow-hidden group px-8 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <span className="relative z-10 text-primary font-semibold group-hover:text-primary transition-colors duration-300 flex items-center">
+                      <BookOpen className="mr-2 h-5 w-5" />
+                      Add to Boo
+                    </span>
+                  </motion.button>
+
+                  {/* Start Over Button */}
+                  <motion.button
+                    onClick={() => {
+                      setSelectedFile(null)
+                      setTranscriptionResult(null)
+                      setEditedTranscription('')
+                      setCreatedEntries(null)
+                      setProcessingMetadata(null)
+                      setShowModal(false)
+                      setShowResults(false)
+                      setShowTranscriptionCard(false)
+                      setShowUploadCard(true)
+                      setUseCustomDateTime(false)
+                      setShowCalendar(false)
+                      setEntryDateTime(new Date().toISOString().slice(0, 16))
+                      if (audioUrl) {
+                        URL.revokeObjectURL(audioUrl)
+                        setAudioUrl(null)
+                      }
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = ''
+                      }
+                    }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.5 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="relative overflow-hidden group px-6 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-gray-500/10 border border-gray-500/20 text-gray-400 hover:bg-gray-500/20 hover:text-gray-300"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-gray-500/10 to-gray-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <span className="relative z-10 font-semibold transition-colors duration-300 flex items-center">
+                      <Plus className="mr-2 h-5 w-5" />
+                      Start Over
+                    </span>
+                  </motion.button>
+
+                  {/* Backfill Entry Button */}
+                  <motion.button
+                    onClick={() => {
+                      // Reset to current date/time when opening modal
+                      const now = new Date()
+                      const todayDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+                      const currentHour = now.getHours()
+                      const currentMinute = now.getMinutes()
+
+                      setBackfillDate(todayDate)
+                      setBackfillHour(currentHour > 12 ? currentHour - 12 : currentHour === 0 ? 12 : currentHour)
+                      setBackfillMinute(currentMinute)
+                      setBackfillAmPm(currentHour >= 12 ? 'PM' : 'AM')
+
+                      setTempDate(todayDate)
+                      setTempHour(currentHour > 12 ? currentHour - 12 : currentHour === 0 ? 12 : currentHour)
+                      setTempMinute(currentMinute)
+                      setTempAmPm(currentHour >= 12 ? 'PM' : 'AM')
+
+                      setShowBackfillModal(true)
+                    }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.6 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="relative overflow-hidden group px-6 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-blue-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <span className="relative z-10 font-semibold transition-colors duration-300 flex items-center">
+                      <Calendar className="mr-2 h-5 w-5" />
+                      Choose Date & Time
+                    </span>
+                  </motion.button>
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </div>
       </div>
 
       {/* Overlay Edit Modal */}
       <AnimatePresence>
-      {showOverlay && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={() => setShowOverlay(false)}
-        >
+        {showOverlay && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="bg-card/90 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] flex flex-col overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowOverlay(false)}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${
-                  overlayMode === 'raw' ? 'from-blue-500 to-blue-600' :
-                  overlayMode === 'enhanced' ? 'from-purple-500 to-pink-500' :
-                  'from-emerald-500 to-teal-500'
-                } flex items-center justify-center`}>
-                  {overlayMode === 'raw' ? <FileText className="h-4 w-4 text-white" /> :
-                   overlayMode === 'enhanced' ? <Pen className="h-4 w-4 text-white" /> :
-                   <BookOpen className="h-4 w-4 text-white" />}
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">
-                    Edit {overlayMode === 'raw' ? 'Raw Transcription' :
-                          overlayMode === 'enhanced' ? 'Enhanced Style' :
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.3 }}
+              className="bg-card/90 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] flex flex-col overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${overlayMode === 'raw' ? 'from-blue-500 to-blue-600' :
+                    overlayMode === 'enhanced' ? 'from-purple-500 to-pink-500' :
+                      'from-emerald-500 to-teal-500'
+                    } flex items-center justify-center`}>
+                    {overlayMode === 'raw' ? <FileText className="h-4 w-4 text-white" /> :
+                      overlayMode === 'enhanced' ? <Pen className="h-4 w-4 text-white" /> :
+                        <BookOpen className="h-4 w-4 text-white" />}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">
+                      Edit {overlayMode === 'raw' ? 'Raw Transcription' :
+                        overlayMode === 'enhanced' ? 'Enhanced Style' :
                           'Structured Summary'}
-                  </h3>
-                  <p className="text-sm text-gray-400">Make changes to your content below</p>
+                    </h3>
+                    <p className="text-sm text-gray-400">Make changes to your content below</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowOverlay(false)}
+                  className="h-8 w-8 p-0 text-blue-300 drop-shadow-[0_0_4px_rgba(147,197,253,0.6)] hover:bg-muted/50 hover:text-white hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.6)]"
+                  title="Close modal"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 p-6 overflow-hidden">
+                <Textarea
+                  value={overlayContent}
+                  onChange={(e) => setOverlayContent(e.target.value)}
+                  className="w-full h-full min-h-[400px] resize-none text-sm leading-relaxed text-white placeholder:text-gray-400 bg-muted/20 border-border focus:border-primary/50 transition-colors"
+                  placeholder="Edit your content here..."
+                />
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between p-6 border-t border-border/50">
+                <div className="text-sm text-gray-400">
+                  {overlayContent.trim().split(/\s+/).filter(Boolean).length} words
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowOverlay(false)}
+                    className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveEdit}
+                    className="px-6 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors flex items-center gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    Save Changes
+                  </button>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowOverlay(false)}
-                className="h-8 w-8 p-0 text-blue-300 drop-shadow-[0_0_4px_rgba(147,197,253,0.6)] hover:bg-muted/50 hover:text-white hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.6)]"
-                title="Close modal"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 p-6 overflow-hidden">
-              <Textarea
-                value={overlayContent}
-                onChange={(e) => setOverlayContent(e.target.value)}
-                className="w-full h-full min-h-[400px] resize-none text-sm leading-relaxed text-white placeholder:text-gray-400 bg-muted/20 border-border focus:border-primary/50 transition-colors"
-                placeholder="Edit your content here..."
-              />
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between p-6 border-t border-border/50">
-              <div className="text-sm text-gray-400">
-                {overlayContent.trim().split(/\s+/).filter(Boolean).length} words
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setShowOverlay(false)}
-                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveEdit}
-                  className="px-6 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors flex items-center gap-2"
-                >
-                  <Save className="h-4 w-4" />
-                  Save Changes
-                </button>
-              </div>
-            </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
+        )}
       </AnimatePresence>
 
       {/* Backfill Entry Modal */}
@@ -1568,7 +1567,7 @@ function VoiceUploadPage() {
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              
+
               {/* Content */}
               <div className="p-6">
                 <div className="space-y-4">
@@ -1584,13 +1583,13 @@ function VoiceUploadPage() {
                             const todayDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
                             const currentHour = now.getHours()
                             const currentMinute = now.getMinutes()
-                            
+
                             // Set BOTH backfill and temp values to current time
                             setBackfillDate(todayDate)
                             setBackfillHour(currentHour > 12 ? currentHour - 12 : currentHour === 0 ? 12 : currentHour)
                             setBackfillMinute(currentMinute)
                             setBackfillAmPm(currentHour >= 12 ? 'PM' : 'AM')
-                            
+
                             setTempDate(todayDate)
                             setTempHour(currentHour > 12 ? currentHour - 12 : currentHour === 0 ? 12 : currentHour)
                             setTempMinute(currentMinute)
@@ -1602,7 +1601,7 @@ function VoiceUploadPage() {
                           {backfillDate ? new Date(`${backfillDate}T${getFormattedTime()}`).toLocaleString('en-US', {
                             weekday: 'short',
                             year: 'numeric',
-                            month: 'short', 
+                            month: 'short',
                             day: 'numeric',
                             hour: 'numeric',
                             minute: '2-digit',
@@ -1612,7 +1611,7 @@ function VoiceUploadPage() {
                         {showBackfillCalendar && (
                           <>
                             {/* Background blur overlay */}
-                            <div 
+                            <div
                               className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[99]"
                               onClick={() => setShowBackfillCalendar(false)}
                             />
@@ -1647,9 +1646,9 @@ function VoiceUploadPage() {
                                         }}
                                         className="w-16 px-3 py-2 bg-background/70 border border-border/70 rounded-lg text-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 hover:bg-background/80 transition-colors"
                                       />
-                                      
+
                                       <span className="text-white">:</span>
-                                      
+
                                       {/* Minute Input */}
                                       <input
                                         type="number"
@@ -1664,7 +1663,7 @@ function VoiceUploadPage() {
                                         }}
                                         className="w-16 px-3 py-2 bg-background/70 border border-border/70 rounded-lg text-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 hover:bg-background/80 transition-colors"
                                       />
-                                      
+
                                       {/* AM/PM Toggle */}
                                       <button
                                         type="button"
@@ -1694,7 +1693,7 @@ function VoiceUploadPage() {
                                       </motion.div>
                                     )}
                                   </AnimatePresence>
-                                  
+
                                   {/* Apply button */}
                                   <Button
                                     onClick={() => {
@@ -1720,13 +1719,13 @@ function VoiceUploadPage() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <p className="text-xs text-gray-400">
                     Entry will be saved with the selected date/time to maintain your diary timeline
                   </p>
                 </div>
               </div>
-              
+
               {/* Footer */}
               <div className="flex items-center justify-between p-6 border-t border-border/50">
                 <button

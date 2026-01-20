@@ -98,7 +98,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
   const audioContextRef = useRef<AudioContext | null>(null)
   const currentAudioSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const { toast } = useToast()
-  
+
   // Track processing stages per entry for consolidated completion notification
   const [processingStages, setProcessingStages] = useState<Record<number, Set<string>>>({})
 
@@ -117,19 +117,19 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
   // Handle processing status updates from WebSocket
   const handleProcessingStatusUpdate = (data: any) => {
     const { type, entry_id, message } = data
-    
+
     // Track completion stages for each entry
     if (entry_id && (type === 'chat_entry_embedding_completed' || type === 'chat_entry_mood_completed')) {
       setProcessingStages(prev => {
         const entryStages = prev[entry_id] || new Set()
         const newStages = new Set(entryStages)
-        
+
         if (type === 'chat_entry_embedding_completed') {
           newStages.add('embedding')
         } else if (type === 'chat_entry_mood_completed') {
           newStages.add('mood')
         }
-        
+
         // Check if all processing is complete (both embedding and mood analysis)
         if (newStages.has('embedding') && newStages.has('mood')) {
           // Show consolidated completion toast
@@ -138,24 +138,24 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
             description: "Your entry has been saved and fully processed",
             duration: 4000
           })
-          
+
           // Clean up tracking for this entry
           const updatedStages = { ...prev }
           delete updatedStages[entry_id]
           return updatedStages
         }
-        
+
         return { ...prev, [entry_id]: newStages }
       })
       return
     }
-    
+
     switch (type) {
       case 'chat_entry_processing_started':
         // Optional: show processing start notification (could be too noisy)
         console.log(`Processing started for chat entry ${entry_id}`)
         break
-        
+
       case 'chat_entry_processing_completed':
         safeToast({
           title: "✅ Entry processed",
@@ -163,7 +163,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
           duration: 4000
         })
         break
-        
+
       case 'chat_entry_processing_failed':
         safeToast({
           title: "❌ Processing failed",
@@ -172,12 +172,12 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
           duration: 4000
         })
         break
-        
+
       default:
         console.log('Unknown processing status:', type)
     }
   }
-  
+
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const messageIdCounter = useRef(0)
@@ -199,7 +199,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
 
   // Load hotkey from preferences - exact same as NewEntryPage
   const [currentHotkey, setCurrentHotkey] = useState('F8')
-  
+
   const loadPreferences = async () => {
     try {
       const response = await api.getPreferences()
@@ -209,7 +209,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
         if (hotkey && hotkey.typed_value) {
           setCurrentHotkey(hotkey.typed_value)
         }
-        
+
         // Load memory setting for this session
         const memoryEnabledPref = response.data.preferences.find((pref: any) => pref.key === 'memory_enabled')
         if (memoryEnabledPref !== undefined) {
@@ -261,7 +261,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
         setIsConnected(false)
       }
     }
-    
+
     if (isOpen) {
       connectWithRetry()
     }
@@ -271,7 +271,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
       console.log('STT State:', state)
       // Reset the starting flag when we get any state update from backend
       isStartingRef.current = false
-      
+
       // Map backend states to frontend states
       if (state.state === 'idle') {
         setRecordingState(RecordingState.IDLE)
@@ -297,12 +297,12 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
     // Subscribe to processing status updates
     const unsubscribeProcessing = wsClient.onMessage('*', (message) => {
       // Only handle processing-related messages
-      if (message.data?.type?.includes('chat_entry_processing') || 
-          message.data?.type?.includes('chat_entry_embedding') ||
-          message.data?.type?.includes('chat_entry_mood') ||
-          (message.data?.job?.type?.includes('chat_entry_processing')) ||
-          (message.data?.job?.type?.includes('chat_entry_embedding')) ||
-          (message.data?.job?.type?.includes('chat_entry_mood'))) {
+      if (message.data?.type?.includes('chat_entry_processing') ||
+        message.data?.type?.includes('chat_entry_embedding') ||
+        message.data?.type?.includes('chat_entry_mood') ||
+        (message.data?.job?.type?.includes('chat_entry_processing')) ||
+        (message.data?.job?.type?.includes('chat_entry_embedding')) ||
+        (message.data?.job?.type?.includes('chat_entry_mood'))) {
         console.log('Processing status update:', message)
         // Handle both direct type and job.type formats
         const statusData = message.data?.job || message.data
@@ -314,21 +314,21 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
     const unsubscribeError = wsClient.onError((error: string) => {
       console.error('WebSocket error:', error)
       // Only show error for critical errors
-      const shouldSkipError = error.includes('connection') || 
-                             error.includes('WebSocket') || 
-                             error.includes('Cannot start recording in state') ||
-                             error.includes('Failed to start STT recording') ||
-                             !error.trim()
-      
+      const shouldSkipError = error.includes('connection') ||
+        error.includes('WebSocket') ||
+        error.includes('Cannot start recording in state') ||
+        error.includes('Failed to start STT recording') ||
+        !error.trim()
+
       if (!shouldSkipError) {
         // Attempt automatic pipeline recovery
         console.log('Attempting automatic recording pipeline recovery...')
-        
+
         // Reset recording state and clear any stuck states
         setRecordingState(RecordingState.IDLE)
         setRecordingSource(null)
         isStartingRef.current = false
-        
+
         // Try to reinitialize the WebSocket connection and reset server-side recording
         setTimeout(async () => {
           try {
@@ -340,7 +340,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
                 // Reset server-side recording session
                 wsClient.resetRecording()
                 console.log('Pipeline recovery successful - WebSocket reconnected and server reset')
-                
+
                 // Show recovery success message instead of error
                 // Force blur immediately and with longer delay
                 if (document.activeElement && document.activeElement !== document.body) {
@@ -362,7 +362,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
               // WebSocket is connected, reset server-side recording and channels
               wsClient.resetRecording()
               wsClient.subscribeToChannels(['stt', 'recording', 'transcription', 'processing'])
-              
+
               // Force blur immediately and with longer delay
               if (document.activeElement && document.activeElement !== document.body) {
                 (document.activeElement as HTMLElement).blur()
@@ -382,7 +382,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
           } catch (recoveryError) {
             console.error('Pipeline recovery failed:', recoveryError)
           }
-          
+
           // If recovery failed, show the original error
           setSttError(error.trim() || "An unknown error occurred")
           setTimeout(() => {
@@ -453,7 +453,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
       if (voiceEnabled) {
         initializeTTS()
       }
-      
+
       // Set up delayed greeting - only show if user hasn't sent anything in 10 seconds and isn't actively using STT or typing
       const greetingTimer = setTimeout(() => {
         // Only show greeting if no messages have been sent yet, no STT activity, and no text in input
@@ -461,7 +461,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
           initializeChat()
         }
       }, 10000) // 10 seconds
-      
+
       return () => clearTimeout(greetingTimer)
     } else {
       // Reset state when modal closes
@@ -530,10 +530,10 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
       const response = await api.getDiaryGreeting()
       if (response.success && response.data) {
         // Ensure we extract the actual string content
-        const greetingText = typeof response.data === 'string' ? response.data : 
-                           (response.data as any)?.data || 
-                           String(response.data)
-        
+        const greetingText = typeof response.data === 'string' ? response.data :
+          (response.data as any)?.data ||
+          String(response.data)
+
         const greetingMessage: ChatMessage = {
           id: messageIdCounter.current++,
           role: 'assistant',
@@ -542,7 +542,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
           isStreaming: true // Enable typewriter animation
         }
         setMessages([greetingMessage])
-        
+
         // TTS will be handled by the TypewriterText onComplete callback
       }
     } catch (error) {
@@ -556,7 +556,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
         isStreaming: true // Enable typewriter animation
       }
       setMessages([fallbackGreeting])
-      
+
       // TTS will be handled by the TypewriterText onComplete callback
     }
   }
@@ -578,7 +578,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
     if (!audioContextRef.current) {
       try {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
-        
+
         // Resume AudioContext if it's suspended (required by some browsers)
         if (audioContextRef.current.state === 'suspended') {
           audioContextRef.current.resume()
@@ -595,7 +595,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
     // Remove markdown emphasis (*, **) and hash symbols
     let cleanText = text.replace(/\*+/g, '')
       .replace(/#/g, '') // Remove hash/pound symbols
-    
+
     // Remove emojis (common Unicode ranges)
     cleanText = cleanText
       // Emoticons (😀-😿)
@@ -612,51 +612,51 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
       .replace(/[\u{2600}-\u{26FF}]/gu, '')
       // Dingbats (✀-➿)
       .replace(/[\u{2700}-\u{27BF}]/gu, '')
-    
+
     // Clean up extra whitespace that might result from removals
     cleanText = cleanText.replace(/\s+/g, ' ').trim()
-    
+
     return cleanText
   }
 
   const playAudioForMessage = async (text: string) => {
     if (!voiceEnabled || !ttsInitialized || audioPlaying) return
-    
+
     try {
       setAudioPlaying(true)
-      
+
       // Apply second-level stripping: Remove TTS-problematic characters when voice is ON
       const ttsText = stripTTSProblematicChars(text)
-      
+
       // Initialize AudioContext if needed
       if (!initializeAudioContext()) {
         // Fallback to HTML audio
         await playAudioFallback(ttsText)
         return
       }
-      
+
       // Synthesize speech (non-streaming for natural voice resonance)
       const audioBlob = await api.synthesizeSpeech(ttsText, false)
       const arrayBuffer = await audioBlob.arrayBuffer()
-      
+
       // Decode audio data using AudioContext
       const audioBuffer = await audioContextRef.current!.decodeAudioData(arrayBuffer)
-      
+
       // Create and configure audio source
       const source = audioContextRef.current!.createBufferSource()
       source.buffer = audioBuffer
       source.connect(audioContextRef.current!.destination)
-      
+
       // Handle playback end
       source.onended = () => {
         setAudioPlaying(false)
         currentAudioSourceRef.current = null
       }
-      
+
       // Store reference and start playback
       currentAudioSourceRef.current = source
       source.start(0)
-      
+
     } catch (error) {
       console.error('AudioContext playback failed, trying fallback:', error)
       // Fallback to HTML audio (also strip problematic chars)
@@ -671,7 +671,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
       // Synthesize speech (non-streaming for natural voice resonance)
       const audioBlob = await api.synthesizeSpeech(text, false)
       const audioUrl = URL.createObjectURL(audioBlob)
-      
+
       // Create and play audio using HTML Audio
       const audio = new Audio(audioUrl)
       audio.onended = () => {
@@ -683,7 +683,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
         URL.revokeObjectURL(audioUrl)
         console.error('HTML Audio playback failed')
       }
-      
+
       await audio.play()
     } catch (error) {
       console.error('All audio playback methods failed:', error)
@@ -697,13 +697,13 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
   const startRecording = async () => {
     // Only proceed if we're truly idle and not already starting
     if (isStartingRef.current || recordingState !== RecordingState.IDLE) {
-      console.log('Start recording blocked - already in progress or not idle:', { 
-        isStarting: isStartingRef.current, 
-        currentState: recordingState 
+      console.log('Start recording blocked - already in progress or not idle:', {
+        isStarting: isStartingRef.current,
+        currentState: recordingState
       })
       return
     }
-    
+
     // Check actual WebSocket connection state
     if (!wsClient.isConnected()) {
       console.log('WebSocket not connected, attempting recovery...')
@@ -730,10 +730,10 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
         return
       }
     }
-    
+
     isStartingRef.current = true
     console.log('Starting recording...')
-    
+
     // Add timeout to prevent stuck states
     const startTimeout = setTimeout(() => {
       if (isStartingRef.current && recordingState === RecordingState.IDLE) {
@@ -742,12 +742,12 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
         setRecordingState(RecordingState.IDLE)
       }
     }, 5000) // 5 second timeout
-    
+
     // Clear timeout when state changes (handled in state change handler)
     const originalRef = isStartingRef.current
-    
+
     wsClient.startRecording()
-    
+
     // Auto-clear timeout if state changes quickly
     setTimeout(() => {
       if (originalRef === isStartingRef.current && recordingState !== RecordingState.IDLE) {
@@ -820,36 +820,36 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
         undefined, // conversationId
         memoryEnabled
       )
-      
+
       if (response.success && response.data) {
         // Extract chat data from nested response structure
-        const chatData = response.data.data || response.data
-        
+        const chatData = (response.data as any).data || response.data
+
         // Check if tool calls were made
         const hasToolCalls = chatData.tool_calls_made?.length > 0
         setIsToolCall(hasToolCalls)
-        
+
         // Show progressive status updates using enhanced processing phases
         if (chatData.processing_phases && chatData.processing_phases.length > 0) {
           for (let i = 0; i < chatData.processing_phases.length; i++) {
             const phase = chatData.processing_phases[i]
             setProcessingMessage(phase.message)
-            
+
             // Add a shorter delay between phases for better responsiveness
             if (i < chatData.processing_phases.length - 1) {
               await new Promise(resolve => setTimeout(resolve, 350))
             }
           }
         }
-        
+
         // Update search queries
         if (chatData.search_queries_used?.length > 0) {
           setSearchQueries(prev => [...prev, ...chatData.search_queries_used])
         }
-        
+
         // Extract the actual response text from the nested structure
-        const responseText = typeof chatData.response === 'string' ? chatData.response : 
-                           String(chatData.response || 'No response received')
+        const responseText = typeof chatData.response === 'string' ? chatData.response :
+          String(chatData.response || 'No response received')
 
         // Check for successful add_entry_to_diary tool calls and show toast
         if (hasToolCalls && chatData.tool_calls_made) {
@@ -876,7 +876,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
         }
 
         setMessages(prev => [...prev, aiMessage])
-        
+
         // TTS will be handled by the TypewriterText onComplete callback
 
       } else {
@@ -919,9 +919,9 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
   const getTranscription = () => {
     return messages.map(msg => {
       const speaker = msg.role === 'user' ? 'You' : 'Boo'
-      const time = msg.timestamp.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      const time = msg.timestamp.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
       })
       return `[${time}] ${speaker}: ${msg.content}`
     }).join('\n')
@@ -1008,24 +1008,23 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
                   className={`flex ${message.role === 'user' ? 'justify-start' : 'justify-end'}`}
                 >
                   <div
-                    className={`max-w-[70%] px-4 py-2 rounded-lg ${
-                      message.role === 'user'
+                    className={`max-w-[70%] px-4 py-2 rounded-lg ${message.role === 'user'
                         ? 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-white'
                         : 'bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-white'
-                    }`}
+                      }`}
                   >
                     <p className="text-sm whitespace-pre-wrap">
                       {message.role === 'assistant' && message.isStreaming ? (
-                        <TypewriterText 
-                          text={message.content} 
+                        <TypewriterText
+                          text={message.content}
                           isActive={true}
                           onComplete={() => {
-                            setMessages(prev => prev.map(msg => 
-                              msg.id === message.id 
+                            setMessages(prev => prev.map(msg =>
+                              msg.id === message.id
                                 ? { ...msg, isStreaming: false }
                                 : msg
                             ))
-                            
+
                             // Play TTS when typewriter animation completes
                             if (voiceEnabled && ttsInitialized) {
                               playAudioForMessage(message.content)
@@ -1067,7 +1066,7 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
             <div className="relative">
               {/* Large text input area */}
               <textarea
-                ref={inputRef}
+                ref={inputRef as any}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyPress}
@@ -1076,23 +1075,21 @@ function ChatModal({ isOpen, onClose, onEndChat }: ChatModalProps) {
                 className="w-full h-24 p-4 pr-28 pb-14 resize-none rounded-lg bg-background/50 border border-border text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 rows={3}
               />
-              
+
               {/* Buttons positioned inside at bottom right with breathing room */}
               <div className="absolute bottom-3 right-3 flex flex-col gap-2">
                 <button
                   onClick={toggleRecording}
                   disabled={isProcessing || recordingState === RecordingState.PROCESSING || recordingState === RecordingState.TRANSCRIBING}
-                  className={`relative overflow-hidden group p-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer inline-flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed w-8 h-8 ${
-                    recordingState === RecordingState.RECORDING 
+                  className={`relative overflow-hidden group p-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer inline-flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed w-8 h-8 ${recordingState === RecordingState.RECORDING
                       ? 'bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30'
                       : 'bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-300 hover:from-purple-500/30 hover:to-pink-500/30'
-                  }`}
+                    }`}
                 >
-                  <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
-                    recordingState === RecordingState.RECORDING 
+                  <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${recordingState === RecordingState.RECORDING
                       ? 'bg-gradient-to-r from-red-500/10 to-red-600/10'
                       : 'bg-gradient-to-r from-purple-500/10 to-pink-500/10'
-                  }`} />
+                    }`} />
                   <span className="relative z-10">
                     {recordingState === RecordingState.RECORDING ? (
                       <MicOff className="h-4 w-4" />

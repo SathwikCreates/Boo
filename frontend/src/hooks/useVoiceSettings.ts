@@ -38,7 +38,7 @@ export function useVoiceSettings() {
         const voicePref = response.data.preferences.find(p => p.key === 'voice_enabled')
         // If preference exists, use it; if not, default to false (OFF)
         const enabled = voicePref ? (voicePref.typed_value === true || voicePref.typed_value === 'true') : false
-        
+
         setVoiceEnabledState(enabled)
         sessionVoiceEnabled = enabled // Store in session
         broadcastVoiceChange(enabled) // Ensure all components sync
@@ -59,7 +59,7 @@ export function useVoiceSettings() {
   // Load voice preference from database or session on mount
   useEffect(() => {
     loadVoicePreference()
-    
+
     // Initialize last update check
     const initialTimestamp = localStorage.getItem('voiceSettingsLastUpdated')
     setLastUpdateCheck(initialTimestamp)
@@ -77,10 +77,10 @@ export function useVoiceSettings() {
 
     // Initial check
     checkForSettingsUpdates()
-    
+
     // Check every 1 second
     const interval = setInterval(checkForSettingsUpdates, 1000)
-    
+
     return () => clearInterval(interval)
   }, [lastUpdateCheck])
 
@@ -103,7 +103,7 @@ export function useVoiceSettings() {
       if (event.detail && typeof event.detail.voiceEnabled === 'boolean') {
         setVoiceEnabled(event.detail.voiceEnabled)
       }
-      
+
       // Also force refresh from database and update timestamp
       const timestamp = Date.now().toString()
       setLastUpdateCheck(timestamp)
@@ -111,7 +111,7 @@ export function useVoiceSettings() {
     }
 
     window.addEventListener('voiceSettingChanged', handleSettingsChange as EventListener)
-    window.addEventListener('settingsChanged', handleSettingsRefresh as EventListener)
+    window.addEventListener('settingsChanged', handleSettingsRefresh as unknown as EventListener)
 
     // Cleanup
     return () => {
@@ -120,7 +120,7 @@ export function useVoiceSettings() {
         sessionListeners.splice(index, 1)
       }
       window.removeEventListener('voiceSettingChanged', handleSettingsChange as EventListener)
-      window.removeEventListener('settingsChanged', handleSettingsRefresh as EventListener)
+      window.removeEventListener('settingsChanged', handleSettingsRefresh as unknown as EventListener)
     }
   }, [])
 

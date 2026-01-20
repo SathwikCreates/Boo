@@ -14,7 +14,7 @@ interface Entry {
   enhanced_text?: string
   structured_summary?: string
   mode: string
-  embeddings?: string
+  embeddings?: number[]
   timestamp: string
   mood_tags?: string[]
   word_count: number
@@ -60,10 +60,10 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`
-    
+
     // Don't set Content-Type for FormData - let browser handle it
     const isFormData = options.body instanceof FormData
-    const defaultHeaders = isFormData ? {} : {
+    const defaultHeaders: Record<string, string> = isFormData ? {} : {
       'Content-Type': 'application/json',
     }
 
@@ -83,7 +83,7 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config)
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         return {
@@ -143,7 +143,7 @@ class ApiClient {
       page: page.toString(),
       page_size: pageSize.toString()
     })
-    
+
     if (mode) {
       params.append('mode', mode)
     }
@@ -269,11 +269,11 @@ class ApiClient {
   async updatePreference(key: string, value: any, valueType: string = 'string', description?: string): Promise<ApiResponse<any>> {
     return this.request(`/preferences/${key}`, {
       method: 'PUT',
-      body: JSON.stringify({ 
-        key, 
-        value, 
-        value_type: valueType, 
-        description 
+      body: JSON.stringify({
+        key,
+        value,
+        value_type: valueType,
+        description
       })
     })
   }
@@ -283,7 +283,7 @@ class ApiClient {
     return this.request('/entries/stats/count')
   }
 
-  async getDailyStreak(): Promise<ApiResponse<{ 
+  async getDailyStreak(): Promise<ApiResponse<{
     streak: number
     last_entry_date: string | null
     total_entries: number
@@ -406,7 +406,7 @@ class ApiClient {
   }>> {
     return this.request(`/patterns/entries/${patternId}`)
   }
-  
+
   async getEntriesByKeyword(keyword: string): Promise<ApiResponse<{
     entries: Entry[]
     keyword: string
@@ -546,28 +546,28 @@ class ApiClient {
         if (useStream && response.body) {
           const reader = response.body.getReader()
           const chunks: Uint8Array[] = []
-          
+
           try {
             let done = false
             let totalBytes = 0
-            
+
             while (!done) {
               const result = await reader.read()
               done = result.done
-              
+
               if (result.value) {
                 chunks.push(result.value)
                 totalBytes += result.value.length
               }
             }
-            
+
             // Ensure we got some data
             if (totalBytes === 0) {
               throw new Error('No audio data received from stream')
             }
-            
+
             // Combine all chunks into a single blob
-            return new Blob(chunks, { type: 'audio/wav' })
+            return new Blob(chunks as any[], { type: 'audio/wav' })
           } finally {
             reader.releaseLock()
           }
@@ -585,7 +585,7 @@ class ApiClient {
         throw error
       }
     }
-    
+
     throw new Error('All TTS synthesis methods failed')
   }
 
@@ -860,7 +860,7 @@ class ApiClient {
   }>> {
     const formData = new FormData()
     formData.append('file', file)
-    
+
     return this.request(`/auth/emergency/upload?name=${encodeURIComponent(name)}`, {
       method: 'POST',
       body: formData

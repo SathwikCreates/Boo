@@ -18,42 +18,42 @@ function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  
+
   // Hotkey settings
   const [hotkey, setHotkey] = useState('F8')
   const [isRecordingHotkey, setIsRecordingHotkey] = useState(false)
-  
+
   // Ollama settings
   const [ollamaHost, setOllamaHost] = useState('localhost')
   const [ollamaPort, setOllamaPort] = useState('11434')
   const [ollamaModels, setOllamaModels] = useState<string[]>([])
   const [ollamaConnected, setOllamaConnected] = useState<boolean | null>(null)
   const [testingOllama, setTestingOllama] = useState(false)
-  
+
   // Journal Processing settings
   const [journalModel, setJournalModel] = useState('mistral:7b')
   const [journalTemperature, setJournalTemperature] = useState('0.1')
   const [journalContextWindow, setJournalContextWindow] = useState('4096')
-  
+
   // Talk to Your Diary settings
   const [diaryModel, setDiaryModel] = useState('qwen3:8b')
   const [diaryTemperature, setDiaryTemperature] = useState('0.2')
   const [diaryContextWindow, setDiaryContextWindow] = useState('8192')
-  
+
   // TTS settings
   const [ttsEngine, setTtsEngine] = useState('piper')
   const [ttsVoice, setTtsVoice] = useState('hfc_female')
   const [ttsSpeed, setTtsSpeed] = useState('1.0')
   const [ttsVolume, setTtsVolume] = useState('1.0')
-  const [availableVoices, setAvailableVoices] = useState<Array<{name: string, filename: string}>>([])
+  const [availableVoices, setAvailableVoices] = useState<Array<{ name: string, filename: string }>>([])
   const [loadingVoices, setLoadingVoices] = useState(false)
-  
+
   // Voice settings (master toggle)
   const [voiceEnabled, setVoiceEnabled] = useState(false) // Default to OFF
-  
+
   // Memory settings
   const [memoryEnabled, setMemoryEnabled] = useState(true) // Default to ON
-  
+
   // General settings
   const [autoSave, setAutoSave] = useState(true)
   const [autoSaveInterval, setAutoSaveInterval] = useState('30')
@@ -89,7 +89,7 @@ function SettingsPage() {
       const response = await api.getPreferences()
       if (response.success && response.data) {
         const prefs = response.data.preferences
-        
+
         // Map preferences to state
         prefs.forEach(pref => {
           switch (pref.key) {
@@ -150,7 +150,7 @@ function SettingsPage() {
           }
         })
       }
-      
+
       // Load Ollama models
       await loadOllamaModels()
     } catch (error) {
@@ -169,7 +169,7 @@ function SettingsPage() {
     try {
       const response = await api.getOllamaModels()
       if (response.success && response.data) {
-        const models = response.data.data?.models || []
+        const models = (response.data as any).data?.models || []
         setOllamaModels(models.map((m: any) => m.name))
         setOllamaConnected(true)
       } else {
@@ -218,21 +218,21 @@ function SettingsPage() {
         method: 'POST',
         body: JSON.stringify({ preferences })
       })
-      
+
       if (response.success) {
         toast({
           title: 'Settings saved',
           description: 'Your preferences have been updated'
         })
-        
+
         // Broadcast settings change to refresh other components
-        window.dispatchEvent(new CustomEvent('settingsChanged', { 
+        window.dispatchEvent(new CustomEvent('settingsChanged', {
           detail: { voiceEnabled: preferences.find(p => p.key === 'voice_enabled')?.value }
         }))
-        
+
         // Also update localStorage timestamp to force refresh
         localStorage.setItem('voiceSettingsLastUpdated', Date.now().toString())
-        
+
         return true
       } else {
         throw new Error(response.error || 'Failed to save preferences')
@@ -300,10 +300,10 @@ function SettingsPage() {
       { key: 'tts_volume', value: parseFloat(ttsVolume), value_type: 'float' }
     ]
     await savePreferences(preferences)
-    
+
     // Broadcast voice change to other components
-    window.dispatchEvent(new CustomEvent('voiceSettingChanged', { 
-      detail: { voiceEnabled } 
+    window.dispatchEvent(new CustomEvent('voiceSettingChanged', {
+      detail: { voiceEnabled }
     }))
   }
 
@@ -312,7 +312,7 @@ function SettingsPage() {
       { key: 'memory_enabled', value: memoryEnabled, value_type: 'bool' }
     ]
     await savePreferences(preferences)
-    
+
     // Dispatch event to notify other components that settings were updated
     window.dispatchEvent(new CustomEvent('settingsUpdated'))
   }
@@ -324,7 +324,7 @@ function SettingsPage() {
       { key: 'theme', value: theme, value_type: 'string' },
     ]
     await savePreferences(preferences)
-    
+
     // Dispatch event to notify other components that settings were updated
     window.dispatchEvent(new CustomEvent('settingsUpdated'))
   }
@@ -336,10 +336,10 @@ function SettingsPage() {
         title: 'Testing connection...',
         description: 'Connecting to Ollama service'
       })
-      
+
       // Test connection using saved settings (not current form values)
       const response = await api.testOllamaConnection()
-      
+
       if (response.success && response.data?.data?.service_ready) {
         setOllamaConnected(true)
         toast({
@@ -370,16 +370,16 @@ function SettingsPage() {
 
   const recordHotkey = () => {
     setIsRecordingHotkey(true)
-    
+
     const handleKeyDown = (e: KeyboardEvent) => {
       e.preventDefault()
       const key = e.key.toUpperCase()
       const modifiers = []
-      
+
       if (e.ctrlKey) modifiers.push('Ctrl')
       if (e.altKey) modifiers.push('Alt')
       if (e.shiftKey) modifiers.push('Shift')
-      
+
       let hotkeyString = ''
       if (modifiers.length > 0) {
         hotkeyString = modifiers.join('+') + '+' + key
@@ -388,12 +388,12 @@ function SettingsPage() {
       } else {
         hotkeyString = modifiers.length > 0 ? modifiers.join('+') + '+' + key : key
       }
-      
+
       setHotkey(hotkeyString)
       setIsRecordingHotkey(false)
       document.removeEventListener('keydown', handleKeyDown)
     }
-    
+
     document.addEventListener('keydown', handleKeyDown)
   }
 
@@ -406,10 +406,10 @@ function SettingsPage() {
     try {
       await api.logoutUser()
       localStorage.removeItem('session_token')
-      
+
       // Dispatch logout event to trigger AuthGuard update
       window.dispatchEvent(new CustomEvent('auth-logout'))
-      
+
       toast({
         title: 'Logged out',
         description: 'You have been logged out successfully'
@@ -578,9 +578,9 @@ function SettingsPage() {
       if (!sessionResponse.success || !sessionResponse.data?.user) {
         throw new Error('Failed to get user information')
       }
-      
+
       const user = sessionResponse.data.user
-      
+
       // Verify password and get the ACTUAL emergency key
       const credentialsResponse = await api.getUserCredentials(currentPasswordForKey)
       if (!credentialsResponse.success) {
@@ -592,9 +592,9 @@ function SettingsPage() {
         setKeyPasswordVerified(false)
         return
       }
-      
+
       // Get the ACTUAL emergency key from signup (not a fake generated one)
-      const actualEmergencyKey = credentialsResponse.data.emergency_key
+      const actualEmergencyKey = (credentialsResponse.data as any).emergency_key
       if (!actualEmergencyKey) {
         toast({
           title: 'Error',
@@ -603,7 +603,7 @@ function SettingsPage() {
         })
         return
       }
-      
+
       // Create the emergency key file content with the ACTUAL key
       const keyData = {
         type: 'boo_emergency_key',
@@ -612,7 +612,7 @@ function SettingsPage() {
         username: user.username,
         name: user.display_name
       }
-      
+
       const content = JSON.stringify(keyData, null, 2)
       const blob = new Blob([content], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
@@ -696,92 +696,92 @@ function SettingsPage() {
               transition={{ duration: 0.3 }}
             >
               <Card className="bg-card/50 backdrop-blur-sm border-border/50 h-full flex flex-col overflow-hidden">
-              <CardHeader className="pb-2 flex-shrink-0">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                    <Settings2 className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="min-w-0">
-                    <CardTitle className="text-base text-white">General Settings</CardTitle>
-                    <CardDescription className="text-gray-400 text-xs">
-                      Configure general application preferences
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-1 overflow-y-auto space-y-3 p-3">
-                {/* Auto-save Setting */}
-                <div className="bg-muted/10 rounded-lg p-3 border border-border/50">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <Label htmlFor="auto-save" className="text-white font-medium">Auto-save entries</Label>
-                      <p className="text-sm text-gray-400 mt-1">
-                        Automatically save entries while typing
-                      </p>
+                <CardHeader className="pb-2 flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                      <Settings2 className="h-4 w-4 text-white" />
                     </div>
-                    <Switch
-                      id="auto-save"
-                      checked={autoSave}
-                      onCheckedChange={setAutoSave}
-                      className="data-[state=checked]:bg-primary"
-                    />
+                    <div className="min-w-0">
+                      <CardTitle className="text-base text-white">General Settings</CardTitle>
+                      <CardDescription className="text-gray-400 text-xs">
+                        Configure general application preferences
+                      </CardDescription>
+                    </div>
                   </div>
-                  
-                  {autoSave && (
-                    <div className="mt-4 space-y-2">
-                      <Label htmlFor="auto-save-interval" className="text-white font-medium">Auto-save interval</Label>
-                      <div className="flex items-center gap-3">
-                        <Input
-                          id="auto-save-interval"
-                          type="number"
-                          min="10"
-                          max="300"
-                          value={autoSaveInterval}
-                          onChange={(e) => setAutoSaveInterval(e.target.value)}
-                          className="w-24 bg-background/50 border-border text-white placeholder:text-gray-500"
-                        />
-                        <span className="text-sm text-gray-400">seconds</span>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-y-auto space-y-3 p-3">
+                  {/* Auto-save Setting */}
+                  <div className="bg-muted/10 rounded-lg p-3 border border-border/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <Label htmlFor="auto-save" className="text-white font-medium">Auto-save entries</Label>
+                        <p className="text-sm text-gray-400 mt-1">
+                          Automatically save entries while typing
+                        </p>
+                      </div>
+                      <Switch
+                        id="auto-save"
+                        checked={autoSave}
+                        onCheckedChange={setAutoSave}
+                        className="data-[state=checked]:bg-primary"
+                      />
+                    </div>
+
+                    {autoSave && (
+                      <div className="mt-4 space-y-2">
+                        <Label htmlFor="auto-save-interval" className="text-white font-medium">Auto-save interval</Label>
+                        <div className="flex items-center gap-3">
+                          <Input
+                            id="auto-save-interval"
+                            type="number"
+                            min="10"
+                            max="300"
+                            value={autoSaveInterval}
+                            onChange={(e) => setAutoSaveInterval(e.target.value)}
+                            className="w-24 bg-background/50 border-border text-white placeholder:text-gray-500"
+                          />
+                          <span className="text-sm text-gray-400">seconds</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Theme Setting */}
+                  <div className="bg-muted/10 rounded-lg p-3 border border-border/50">
+                    <Label htmlFor="theme" className="text-white font-medium mb-2 block">Theme</Label>
+                    <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <Palette className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-purple-300">
+                          Coming Soon - We're working on beautiful theme options for Boo
+                        </p>
                       </div>
                     </div>
-                  )}
-                </div>
-
-                {/* Theme Setting */}
-                <div className="bg-muted/10 rounded-lg p-3 border border-border/50">
-                  <Label htmlFor="theme" className="text-white font-medium mb-2 block">Theme</Label>
-                  <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <Palette className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-purple-300">
-                        Coming Soon - We're working on beautiful theme options for Boo
-                      </p>
-                    </div>
                   </div>
-                </div>
 
 
-                {/* Save Button */}
-                <div className="flex justify-end pt-2">
-                  <button 
-                    onClick={handleSaveGeneral} 
-                    disabled={saving}
-                    className="relative overflow-hidden group px-5 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <span className="relative z-10 flex items-center font-medium">
-                      {saving ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        'Save Settings'
-                      )}
-                    </span>
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
+                  {/* Save Button */}
+                  <div className="flex justify-end pt-2">
+                    <button
+                      onClick={handleSaveGeneral}
+                      disabled={saving}
+                      className="relative overflow-hidden group px-5 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <span className="relative z-10 flex items-center font-medium">
+                        {saving ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          'Save Settings'
+                        )}
+                      </span>
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
             </motion.div>
           </TabsContent>
 
@@ -806,7 +806,7 @@ function SettingsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-y-auto space-y-3 p-3">
-                  
+
                   {/* Account Information */}
                   <div className="bg-muted/10 rounded-lg p-3 border border-border/50">
                     <div className="flex items-center justify-between">
@@ -834,11 +834,11 @@ function SettingsPage() {
                         <div className="space-y-2">
                           <div className="relative">
                             <Input
-                            type={showCurrentPassword ? "text" : "password"}
-                            value={currentPasswordForChange}
-                            onChange={(e) => setCurrentPasswordForChange(e.target.value)}
-                            placeholder="Current password"
-                            className="bg-background/50 border-border text-white text-sm placeholder:text-gray-500 pr-10"
+                              type={showCurrentPassword ? "text" : "password"}
+                              value={currentPasswordForChange}
+                              onChange={(e) => setCurrentPasswordForChange(e.target.value)}
+                              placeholder="Current password"
+                              className="bg-background/50 border-border text-white text-sm placeholder:text-gray-500 pr-10"
                             />
                             <button
                               type="button"
@@ -848,68 +848,68 @@ function SettingsPage() {
                               {showCurrentPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                             </button>
                           </div>
-                        <div className="relative">
-                          <Input
-                            type={showNewPassword ? "text" : "password"}
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder="New password"
-                            className="bg-background/50 border-border text-white text-sm placeholder:text-gray-500 pr-10"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowNewPassword(!showNewPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                          >
-                            {showNewPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                          </button>
-                        </div>
-                        <div className="relative">
-                          <Input
-                            type={showConfirmPassword ? "text" : "password"}
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="Confirm new password"
-                            className="bg-background/50 border-border text-white text-sm placeholder:text-gray-500 pr-10"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                          >
-                            {showConfirmPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                          </button>
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => {
-                              setChangingPassword(false)
-                              setNewPassword('')
-                              setConfirmPassword('')
-                              setCurrentPasswordForChange('')
-                            }}
-                            className="px-2 py-1.5 text-sm text-gray-400 hover:text-white bg-muted/20 hover:bg-muted/30 border border-border/50 rounded-md"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={handleChangePassword}
-                            disabled={saving || !currentPasswordForChange || !newPassword || !confirmPassword}
-                            className="relative overflow-hidden group px-3 py-1.5 rounded-md font-medium shadow hover:shadow-lg hover:scale-[1.01] transition-all duration-200 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                          >
-                            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                            <span className="relative z-10 flex items-center font-medium">
-                              {saving ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  Saving...
-                                </>
-                              ) : (
-                                'Save Settings'
-                              )}
-                            </span>
-                          </button>
-                        </div>
+                          <div className="relative">
+                            <Input
+                              type={showNewPassword ? "text" : "password"}
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              placeholder="New password"
+                              className="bg-background/50 border-border text-white text-sm placeholder:text-gray-500 pr-10"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowNewPassword(!showNewPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                            >
+                              {showNewPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                            </button>
+                          </div>
+                          <div className="relative">
+                            <Input
+                              type={showConfirmPassword ? "text" : "password"}
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              placeholder="Confirm new password"
+                              className="bg-background/50 border-border text-white text-sm placeholder:text-gray-500 pr-10"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                            >
+                              {showConfirmPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                            </button>
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setChangingPassword(false)
+                                setNewPassword('')
+                                setConfirmPassword('')
+                                setCurrentPasswordForChange('')
+                              }}
+                              className="px-2 py-1.5 text-sm text-gray-400 hover:text-white bg-muted/20 hover:bg-muted/30 border border-border/50 rounded-md"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={handleChangePassword}
+                              disabled={saving || !currentPasswordForChange || !newPassword || !confirmPassword}
+                              className="relative overflow-hidden group px-3 py-1.5 rounded-md font-medium shadow hover:shadow-lg hover:scale-[1.01] transition-all duration-200 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                              <span className="relative z-10 flex items-center font-medium">
+                                {saving ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Saving...
+                                  </>
+                                ) : (
+                                  'Save Settings'
+                                )}
+                              </span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -948,42 +948,42 @@ function SettingsPage() {
                               {showPhrasePassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                             </button>
                           </div>
-                        <textarea
-                          rows={3}
-                          value={newRecoveryPhrase}
-                          onChange={(e) => setNewRecoveryPhrase(e.target.value)}
-                          placeholder="New recovery phrase"
-                          className="w-full bg-background/50 border border-border rounded-md text-white text-sm placeholder:text-gray-500 resize-none px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        />
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => {
-                              setChangingPhrase(false)
-                              setNewRecoveryPhrase('')
-                              setCurrentPasswordForPhrase('')
-                            }}
-                            className="px-2 py-1.5 text-sm text-gray-400 hover:text-white bg-muted/20 hover:bg-muted/30 border border-border/50 rounded-md"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={handleChangeRecoveryPhrase}
-                            disabled={saving || !currentPasswordForPhrase || !newRecoveryPhrase.trim()}
-                            className="relative overflow-hidden group px-3 py-1.5 rounded-md font-medium shadow hover:shadow-lg hover:scale-[1.01] transition-all duration-200 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                          >
-                            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                            <span className="relative z-10 flex items-center font-medium">
-                              {saving ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  Saving...
-                                </>
-                              ) : (
-                                'Save Settings'
-                              )}
-                            </span>
-                          </button>
-                        </div>
+                          <textarea
+                            rows={3}
+                            value={newRecoveryPhrase}
+                            onChange={(e) => setNewRecoveryPhrase(e.target.value)}
+                            placeholder="New recovery phrase"
+                            className="w-full bg-background/50 border border-border rounded-md text-white text-sm placeholder:text-gray-500 resize-none px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                          />
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setChangingPhrase(false)
+                                setNewRecoveryPhrase('')
+                                setCurrentPasswordForPhrase('')
+                              }}
+                              className="px-2 py-1.5 text-sm text-gray-400 hover:text-white bg-muted/20 hover:bg-muted/30 border border-border/50 rounded-md"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={handleChangeRecoveryPhrase}
+                              disabled={saving || !currentPasswordForPhrase || !newRecoveryPhrase.trim()}
+                              className="relative overflow-hidden group px-3 py-1.5 rounded-md font-medium shadow hover:shadow-lg hover:scale-[1.01] transition-all duration-200 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                              <span className="relative z-10 flex items-center font-medium">
+                                {saving ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Saving...
+                                  </>
+                                ) : (
+                                  'Save Settings'
+                                )}
+                              </span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1043,8 +1043,8 @@ function SettingsPage() {
 
                   {/* Save Button */}
                   <div className="flex justify-end pt-2">
-                    <button 
-                      onClick={handleSaveGeneral} 
+                    <button
+                      onClick={handleSaveGeneral}
                       disabled={saving}
                       className="relative overflow-hidden group px-3 py-1.5 rounded-md font-medium shadow hover:shadow-lg hover:scale-[1.01] transition-all duration-200 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                     >
@@ -1074,72 +1074,71 @@ function SettingsPage() {
               transition={{ duration: 0.3 }}
             >
               <Card className="bg-card/50 backdrop-blur-sm border-border/50 h-full flex flex-col overflow-hidden">
-              <CardHeader className="pb-2 flex-shrink-0">
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
-                    <Keyboard className="h-4 w-4 text-white" />
+                <CardHeader className="pb-2 flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
+                      <Keyboard className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="min-w-0">
+                      <CardTitle className="text-lg text-white">Hotkey Configuration</CardTitle>
+                      <CardDescription className="text-gray-400 text-sm">
+                        Configure the global hotkey for voice recording
+                      </CardDescription>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <CardTitle className="text-lg text-white">Hotkey Configuration</CardTitle>
-                    <CardDescription className="text-gray-400 text-sm">
-                      Configure the global hotkey for voice recording
-                    </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-y-auto space-y-4 p-4">
+                  {/* Hotkey Setting */}
+                  <div className="bg-muted/10 rounded-lg p-4 border border-border/50">
+                    <Label htmlFor="hotkey" className="text-white font-medium mb-3 block">Recording Hotkey</Label>
+                    <div className="flex gap-3 mb-3">
+                      <Input
+                        id="hotkey"
+                        value={hotkey}
+                        readOnly
+                        className="flex-1 font-mono bg-background/50 border-border text-white placeholder:text-gray-500"
+                        placeholder="Press Change to set hotkey"
+                      />
+                      <button
+                        onClick={recordHotkey}
+                        disabled={isRecordingHotkey}
+                        className={`relative overflow-hidden group px-4 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center w-32 ${isRecordingHotkey
+                            ? 'bg-red-500/20 border border-red-500/30 text-red-500 animate-pulse'
+                            : 'bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20'
+                          }`}
+                      >
+                        <span className="relative z-10 text-center font-medium">
+                          {isRecordingHotkey ? 'Press any key...' : 'Change'}
+                        </span>
+                      </button>
+                    </div>
+                    <p className="text-sm text-gray-400">
+                      Press and hold this key to start recording your voice
+                    </p>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-1 overflow-y-auto space-y-4 p-4">
-                {/* Hotkey Setting */}
-                <div className="bg-muted/10 rounded-lg p-4 border border-border/50">
-                  <Label htmlFor="hotkey" className="text-white font-medium mb-3 block">Recording Hotkey</Label>
-                  <div className="flex gap-3 mb-3">
-                    <Input
-                      id="hotkey"
-                      value={hotkey}
-                      readOnly
-                      className="flex-1 font-mono bg-background/50 border-border text-white placeholder:text-gray-500"
-                      placeholder="Press Change to set hotkey"
-                    />
+
+                  {/* Save Button */}
+                  <div className="flex justify-end pt-2">
                     <button
-                      onClick={recordHotkey}
-                      disabled={isRecordingHotkey}
-                      className={`relative overflow-hidden group px-4 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center w-32 ${
-                        isRecordingHotkey
-                          ? 'bg-red-500/20 border border-red-500/30 text-red-500 animate-pulse'
-                          : 'bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20'
-                      }`}
+                      onClick={handleSaveHotkey}
+                      disabled={saving}
+                      className="relative overflow-hidden group px-5 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <span className="relative z-10 text-center font-medium">
-                        {isRecordingHotkey ? 'Press any key...' : 'Change'}
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <span className="relative z-10 flex items-center font-medium">
+                        {saving ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          'Save Settings'
+                        )}
                       </span>
                     </button>
                   </div>
-                  <p className="text-sm text-gray-400">
-                    Press and hold this key to start recording your voice
-                  </p>
-                </div>
-
-                {/* Save Button */}
-                <div className="flex justify-end pt-2">
-                  <button 
-                    onClick={handleSaveHotkey} 
-                    disabled={saving}
-                    className="relative overflow-hidden group px-5 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <span className="relative z-10 flex items-center font-medium">
-                      {saving ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        'Save Settings'
-                      )}
-                    </span>
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
             </motion.div>
           </TabsContent>
 
@@ -1164,7 +1163,7 @@ function SettingsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4 p-3">
-                  
+
                   {/* Connection Section */}
                   <div className="bg-muted/10 rounded-lg p-3 border border-border/50">
                     <h3 className="text-white font-medium mb-3 text-sm flex items-center gap-2">
@@ -1239,7 +1238,7 @@ function SettingsPage() {
                         <FileText className="h-4 w-4 text-emerald-500" />
                         Processing Model
                       </h3>
-                      
+
                       {/* Journal Model */}
                       <div className="space-y-1 mb-3">
                         <Select value={journalModel} onValueChange={setJournalModel}>
@@ -1281,7 +1280,7 @@ function SettingsPage() {
                             0 = focused, 1 = creative
                           </p>
                         </div>
-                        
+
                         <div className="space-y-1">
                           <Label htmlFor="journal-context" className="text-white font-medium text-sm">Context Window</Label>
                           <Select value={journalContextWindow} onValueChange={setJournalContextWindow}>
@@ -1311,7 +1310,7 @@ function SettingsPage() {
                         <MessageSquare className="h-4 w-4 text-purple-500" />
                         Talk to Boo Model
                       </h3>
-                      
+
                       {/* Diary Chat Model */}
                       <div className="space-y-1 mb-3">
                         <Select value={diaryModel} onValueChange={setDiaryModel}>
@@ -1353,7 +1352,7 @@ function SettingsPage() {
                             0 = focused, 1 = creative
                           </p>
                         </div>
-                        
+
                         <div className="space-y-1">
                           <Label htmlFor="diary-context" className="text-white font-medium text-sm">Context Window</Label>
                           <Select value={diaryContextWindow} onValueChange={setDiaryContextWindow}>
@@ -1378,8 +1377,8 @@ function SettingsPage() {
 
                   {/* Save Button */}
                   <div className="flex justify-end pt-2">
-                    <button 
-                      onClick={handleSaveOllama} 
+                    <button
+                      onClick={handleSaveOllama}
                       disabled={saving}
                       className="relative overflow-hidden group px-5 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -1409,162 +1408,162 @@ function SettingsPage() {
               transition={{ duration: 0.3 }}
             >
               <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-                    <Mic className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl text-white">Text-to-Speech Configuration</CardTitle>
-                    <CardDescription className="text-gray-400 text-sm">
-                      Configure voice output settings for Talk to Boo feature
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Voice Toggle Settings */}
-                <div className="bg-muted/10 rounded-lg p-4 border border-border/50">
-                  <div className="flex items-center justify-between">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+                      <Mic className="h-5 w-5 text-white" />
+                    </div>
                     <div>
-                      <h3 className="text-white font-medium">Voice Output</h3>
+                      <CardTitle className="text-xl text-white">Text-to-Speech Configuration</CardTitle>
+                      <CardDescription className="text-gray-400 text-sm">
+                        Configure voice output settings for Talk to Boo feature
+                      </CardDescription>
                     </div>
-                    <Switch
-                      checked={voiceEnabled}
-                      onCheckedChange={setVoiceEnabled}
-                      className="ml-4"
-                    />
                   </div>
-                </div>
-
-                {/* TTS Engine Settings */}
-                <div className="bg-muted/10 rounded-lg p-4 border border-border/50">
-                  <h3 className="text-white font-medium mb-4">Engine Configuration</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="tts-engine" className="text-white font-medium">TTS Engine</Label>
-                      <Select value={ttsEngine} onValueChange={setTtsEngine}>
-                        <SelectTrigger className="bg-background/50 border-border text-white hover:bg-muted/50">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background border-border">
-                          <SelectItem value="piper" className="text-white hover:bg-muted/50 focus:bg-muted/50">Piper</SelectItem>
-                        </SelectContent>
-                      </Select>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Voice Toggle Settings */}
+                  <div className="bg-muted/10 rounded-lg p-4 border border-border/50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-white font-medium">Voice Output</h3>
+                      </div>
+                      <Switch
+                        checked={voiceEnabled}
+                        onCheckedChange={setVoiceEnabled}
+                        className="ml-4"
+                      />
                     </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="tts-voice" className="text-white font-medium">Voice</Label>
-                      {loadingVoices ? (
-                        <div className="flex items-center justify-center h-10 bg-background/50 rounded-md border border-border">
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        </div>
-                      ) : availableVoices.length > 0 ? (
-                        <Select value={ttsVoice} onValueChange={setTtsVoice}>
+                  </div>
+
+                  {/* TTS Engine Settings */}
+                  <div className="bg-muted/10 rounded-lg p-4 border border-border/50">
+                    <h3 className="text-white font-medium mb-4">Engine Configuration</h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="tts-engine" className="text-white font-medium">TTS Engine</Label>
+                        <Select value={ttsEngine} onValueChange={setTtsEngine}>
                           <SelectTrigger className="bg-background/50 border-border text-white hover:bg-muted/50">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="bg-background border-border">
-                            {availableVoices.map((voice) => (
-                              <SelectItem 
-                                key={voice.filename} 
-                                value={voice.filename} 
-                                className="text-white hover:bg-muted/50 focus:bg-muted/50"
-                              >
-                                {voice.name}
-                              </SelectItem>
-                            ))}
+                            <SelectItem value="piper" className="text-white hover:bg-muted/50 focus:bg-muted/50">Piper</SelectItem>
                           </SelectContent>
                         </Select>
-                      ) : (
-                        <div className="bg-background/50 border border-border rounded-md p-3">
-                          <p className="text-sm text-gray-400">No voices found. Please add voice files to the backend/TTS directory.</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Info message about downloading voices */}
-                  <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg p-3 mt-4">
-                    <p className="text-sm text-purple-300">
-                      <strong>Note:</strong> To add more voices, <a 
-                        href="https://huggingface.co/rhasspy/piper-voices/tree/main/en" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-pink-400 hover:text-pink-300 underline hover:no-underline transition-colors duration-200"
-                      >
-                        download Piper TTS voice models
-                      </a> (.onnx and .onnx.json files) 
-                      and place them in the <code className="bg-background/50 px-1 py-0.5 rounded">backend/TTS</code> directory.
-                    </p>
-                  </div>
-
-                  {/* Voice Parameters */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div className="space-y-3">
-                      <Label htmlFor="tts-speed" className="text-white font-medium">Speed</Label>
-                      <div className="flex items-center gap-3">
-                        <Slider
-                          id="tts-speed"
-                          min={0}
-                          max={2}
-                          step={0.5}
-                          value={[parseFloat(ttsSpeed)]}
-                          onValueChange={(value) => setTtsSpeed(value[0].toString())}
-                          className="flex-1 [&>*:first-child]:bg-muted/30 [&>*:first-child]:border-border/50"
-                        />
-                        <span className="w-12 text-sm text-white font-mono bg-background/50 px-2 py-1 rounded text-center">
-                          {ttsSpeed}x
-                        </span>
                       </div>
-                      <p className="text-xs text-gray-400">
-                        0x = silent, 0.5x = slow, 1x = normal, 1.5x = fast, 2x = fastest
+
+                      <div className="space-y-2">
+                        <Label htmlFor="tts-voice" className="text-white font-medium">Voice</Label>
+                        {loadingVoices ? (
+                          <div className="flex items-center justify-center h-10 bg-background/50 rounded-md border border-border">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : availableVoices.length > 0 ? (
+                          <Select value={ttsVoice} onValueChange={setTtsVoice}>
+                            <SelectTrigger className="bg-background/50 border-border text-white hover:bg-muted/50">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-background border-border">
+                              {availableVoices.map((voice) => (
+                                <SelectItem
+                                  key={voice.filename}
+                                  value={voice.filename}
+                                  className="text-white hover:bg-muted/50 focus:bg-muted/50"
+                                >
+                                  {voice.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="bg-background/50 border border-border rounded-md p-3">
+                            <p className="text-sm text-gray-400">No voices found. Please add voice files to the backend/TTS directory.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Info message about downloading voices */}
+                    <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg p-3 mt-4">
+                      <p className="text-sm text-purple-300">
+                        <strong>Note:</strong> To add more voices, <a
+                          href="https://huggingface.co/rhasspy/piper-voices/tree/main/en"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-pink-400 hover:text-pink-300 underline hover:no-underline transition-colors duration-200"
+                        >
+                          download Piper TTS voice models
+                        </a> (.onnx and .onnx.json files)
+                        and place them in the <code className="bg-background/50 px-1 py-0.5 rounded">backend/TTS</code> directory.
                       </p>
                     </div>
-                    
-                    <div className="space-y-3">
-                      <Label htmlFor="tts-volume" className="text-white font-medium">Volume</Label>
-                      <div className="flex items-center gap-3">
-                        <Slider
-                          id="tts-volume"
-                          min={0}
-                          max={1}
-                          step={0.1}
-                          value={[parseFloat(ttsVolume)]}
-                          onValueChange={(value) => setTtsVolume(value[0].toString())}
-                          className="flex-1 [&>*:first-child]:bg-muted/30 [&>*:first-child]:border-border/50"
-                        />
-                        <span className="w-12 text-sm text-white font-mono bg-background/50 px-2 py-1 rounded text-center">
-                          {Math.round(parseFloat(ttsVolume) * 100)}%
-                        </span>
+
+                    {/* Voice Parameters */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <div className="space-y-3">
+                        <Label htmlFor="tts-speed" className="text-white font-medium">Speed</Label>
+                        <div className="flex items-center gap-3">
+                          <Slider
+                            id="tts-speed"
+                            min={0}
+                            max={2}
+                            step={0.5}
+                            value={[parseFloat(ttsSpeed)]}
+                            onValueChange={(value) => setTtsSpeed(value[0].toString())}
+                            className="flex-1 [&>*:first-child]:bg-muted/30 [&>*:first-child]:border-border/50"
+                          />
+                          <span className="w-12 text-sm text-white font-mono bg-background/50 px-2 py-1 rounded text-center">
+                            {ttsSpeed}x
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-400">
+                          0x = silent, 0.5x = slow, 1x = normal, 1.5x = fast, 2x = fastest
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label htmlFor="tts-volume" className="text-white font-medium">Volume</Label>
+                        <div className="flex items-center gap-3">
+                          <Slider
+                            id="tts-volume"
+                            min={0}
+                            max={1}
+                            step={0.1}
+                            value={[parseFloat(ttsVolume)]}
+                            onValueChange={(value) => setTtsVolume(value[0].toString())}
+                            className="flex-1 [&>*:first-child]:bg-muted/30 [&>*:first-child]:border-border/50"
+                          />
+                          <span className="w-12 text-sm text-white font-mono bg-background/50 px-2 py-1 rounded text-center">
+                            {Math.round(parseFloat(ttsVolume) * 100)}%
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Save Button */}
-                <div className="flex justify-end pt-2">
-                  <button 
-                    onClick={handleSaveTTS} 
-                    disabled={saving}
-                    className="relative overflow-hidden group px-5 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <span className="relative z-10 flex items-center font-medium">
-                      {saving ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        'Save Settings'
-                      )}
-                    </span>
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
+                  {/* Save Button */}
+                  <div className="flex justify-end pt-2">
+                    <button
+                      onClick={handleSaveTTS}
+                      disabled={saving}
+                      className="relative overflow-hidden group px-5 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <span className="relative z-10 flex items-center font-medium">
+                        {saving ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          'Save Settings'
+                        )}
+                      </span>
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
             </motion.div>
           </TabsContent>
 
@@ -1594,7 +1593,7 @@ function SettingsPage() {
                     <div className="flex items-start gap-3">
                       <AlertTriangle className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
                       <p className="text-sm text-purple-300">
-                        Beta Feature - The memory system is currently in beta. We're actively working to improve 
+                        Beta Feature - The memory system is currently in beta. We're actively working to improve
                         how Boo remembers and uses information from your journal entries and conversations.
                       </p>
                     </div>
@@ -1622,8 +1621,8 @@ function SettingsPage() {
 
                   {/* Save Button */}
                   <div className="flex justify-end pt-2">
-                    <button 
-                      onClick={handleSaveMemory} 
+                    <button
+                      onClick={handleSaveMemory}
                       disabled={saving}
                       className="relative overflow-hidden group px-5 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer inline-flex items-center justify-center bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     >

@@ -81,7 +81,7 @@ class WebSocketClient {
           console.log('WebSocket disconnected:', event.code, event.reason)
           this.isConnecting = false
           this.notifyConnectionHandlers(false)
-          
+
           if (this.shouldReconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
             this.scheduleReconnect()
           }
@@ -112,9 +112,9 @@ class WebSocketClient {
   private scheduleReconnect(): void {
     this.reconnectAttempts++
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1)
-    
+
     console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`)
-    
+
     setTimeout(() => {
       if (this.shouldReconnect) {
         this.connect()
@@ -124,7 +124,7 @@ class WebSocketClient {
 
   private handleMessage(message: WebSocketMessage): void {
     console.log('WebSocket received message:', message.type, message.data)
-    
+
     // Handle specific message types
     switch (message.type) {
       case 'state_change':
@@ -290,12 +290,10 @@ class WebSocketClient {
 
 // Export singleton instance
 export const wsClient = new WebSocketClient()
-export type { 
-  WebSocketMessage, 
-  STTState, 
-  TranscriptionResult, 
-  MessageHandler, 
-  StateChangeHandler, 
-  TranscriptionHandler, 
-  ErrorHandler 
+export type {
+  WebSocketMessage,
+  MessageHandler,
+  StateChangeHandler,
+  TranscriptionHandler,
+  ErrorHandler
 }

@@ -45,7 +45,7 @@ function TypewriterText({ text, delay = 0, className = '' }: TypewriterTextProps
   }, [currentIndex, text, startTyping])
 
   return (
-    <motion.p 
+    <motion.p
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: startTyping ? 1 : 0, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -104,12 +104,12 @@ function TalkToYourDiaryPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null)
   const [deleting, setDeleting] = useState(false)
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const pageSize = 6 // Show 6 conversations per page
-  
+
   const { toast } = useToast()
 
   // Preparing messages for loading animation
@@ -161,13 +161,13 @@ function TalkToYourDiaryPage() {
     try {
       const response = await api.getConversations()
       console.log('API Response:', response) // Debug log
-      
+
       if (response.success && response.data) {
         console.log('Response data:', response.data) // Debug log
-        
+
         // Handle nested response structure from SuccessResponse
-        const conversationsData = response.data.data || response.data
-        
+        const conversationsData = (response.data as any).data || response.data
+
         if (conversationsData && conversationsData.conversations) {
           console.log('Conversations found:', conversationsData.conversations.length) // Debug log
           setConversations(conversationsData.conversations)
@@ -200,11 +200,11 @@ function TalkToYourDiaryPage() {
   const handleStartChat = async () => {
     setIsPreparing(true)
     setPreparingMessageIndex(0)
-    
+
     try {
       // Wait for model to be FULLY ready
       await api.preheatDiaryChat()
-      
+
       // Only open modal after preheat succeeds
       setIsChatModalOpen(true)
     } catch (error) {
@@ -240,10 +240,10 @@ function TalkToYourDiaryPage() {
       messageCount,
       searchQueries
     })
-    
+
     // Close ChatModal first
     setIsChatModalOpen(false)
-    
+
     // Wait for ChatModal exit animation to complete (300ms) then show SaveDiscardModal
     setTimeout(() => {
       setIsSaveModalOpen(true)
@@ -334,7 +334,7 @@ function TalkToYourDiaryPage() {
       }
       return msg
     }).join(' → ')
-    
+
     return preview.length > 120 ? preview.substring(0, 120) + '...' : preview
   }
 
@@ -343,7 +343,7 @@ function TalkToYourDiaryPage() {
     const date = new Date(conversation.timestamp)
     const dateStr = format(date, 'yyyy-MM-dd')
     const filename = `conversation-${dateStr}.txt`
-    
+
     const blob = new Blob([conversation.transcription], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -382,9 +382,9 @@ function TalkToYourDiaryPage() {
                     <CardTitle className="text-lg text-white">Talk to Boo</CardTitle>
                   </div>
                 </div>
-                
+
                 {/* Voice Toggle in Header */}
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 }}
@@ -406,38 +406,38 @@ function TalkToYourDiaryPage() {
               {/* Background decorative elements */}
               <div className="absolute inset-4 opacity-20">
                 <motion.div
-                  animate={{ 
+                  animate={{
                     x: [0, 60, 0],
                     y: [0, -30, 0]
                   }}
-                  transition={{ 
-                    duration: 20, 
-                    repeat: Infinity, 
-                    ease: "linear" 
+                  transition={{
+                    duration: 20,
+                    repeat: Infinity,
+                    ease: "linear"
                   }}
                   className="absolute top-10 left-10 w-4 h-4 bg-primary/30 rounded-full blur-sm"
                 />
                 <motion.div
-                  animate={{ 
+                  animate={{
                     x: [0, -40, 0],
                     y: [0, 30, 0]
                   }}
-                  transition={{ 
-                    duration: 15, 
-                    repeat: Infinity, 
-                    ease: "linear" 
+                  transition={{
+                    duration: 15,
+                    repeat: Infinity,
+                    ease: "linear"
                   }}
                   className="absolute top-32 right-16 w-2 h-2 bg-secondary/40 rounded-full blur-sm"
                 />
                 <motion.div
-                  animate={{ 
+                  animate={{
                     x: [0, 30, 0],
                     y: [0, -20, 0]
                   }}
-                  transition={{ 
-                    duration: 25, 
-                    repeat: Infinity, 
-                    ease: "linear" 
+                  transition={{
+                    duration: 25,
+                    repeat: Infinity,
+                    ease: "linear"
                   }}
                   className="absolute bottom-20 left-20 w-3 h-3 bg-primary/20 rounded-full blur-sm"
                 />
@@ -455,13 +455,13 @@ function TalkToYourDiaryPage() {
                   whileTap={{ scale: 0.95 }}
                 >
                   <motion.div
-                    animate={{ 
+                    animate={{
                       scale: [1, 1.05, 1]
                     }}
-                    transition={{ 
-                      duration: 3, 
-                      repeat: Infinity, 
-                      ease: "easeInOut" 
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "easeInOut"
                     }}
                     className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center border border-primary/30"
                   >
@@ -469,20 +469,20 @@ function TalkToYourDiaryPage() {
                   </motion.div>
                   {/* Subtle breathing glow effect */}
                   <motion.div
-                    animate={{ 
+                    animate={{
                       opacity: [0.1, 0.3, 0.1],
                       scale: [1, 1.1, 1]
                     }}
-                    transition={{ 
-                      duration: 4, 
+                    transition={{
+                      duration: 4,
                       repeat: Infinity,
                       ease: "easeInOut"
                     }}
                     className="absolute inset-0 rounded-full bg-primary/20 blur-lg"
                   />
                 </motion.div>
-                
-                <TypewriterText 
+
+                <TypewriterText
                   text="A quiet space... for your loud thoughts"
                   delay={0.4}
                   className="text-gray-400 text-center max-w-sm"
@@ -576,7 +576,7 @@ function TalkToYourDiaryPage() {
                           exit={{ opacity: 0, y: -10 }}
                           transition={{ delay: index * 0.05 }}
                         >
-                          <Card 
+                          <Card
                             className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:bg-muted/30 group relative overflow-hidden"
                             onClick={() => {
                               openConversationDetail(conv)
@@ -584,7 +584,7 @@ function TalkToYourDiaryPage() {
                           >
                             {/* Shimmer effect */}
                             <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:translate-x-full transition-transform duration-700" />
-                            
+
                             <CardContent className="p-3 relative">
                               <div className="flex items-start justify-between mb-2">
                                 <div className="flex-1 min-w-0">
@@ -624,7 +624,7 @@ function TalkToYourDiaryPage() {
                                   </Button>
                                 </div>
                               </div>
-                              
+
                               <div className="flex items-center justify-between mt-2">
                                 <div className="flex items-center gap-2">
                                   <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-xs">
@@ -687,12 +687,12 @@ function TalkToYourDiaryPage() {
                         <ChevronLeft className="h-4 w-4" />
                         Previous
                       </Button>
-                      
+
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <span>Page {currentPage} of {totalPages}</span>
                         <span className="text-xs">({conversations.length} total)</span>
                       </div>
-                      
+
                       <Button
                         variant="ghost"
                         size="sm"
@@ -772,14 +772,14 @@ function TalkToYourDiaryPage() {
                   <p className="text-sm text-muted-foreground">This action cannot be undone</p>
                 </div>
               </div>
-              
+
               <p className="text-white mb-6">
                 Are you sure you want to delete this conversation from{' '}
                 <span className="font-medium text-primary">
                   {format(new Date(conversationToDelete.timestamp), 'EEEE, MMMM d, yyyy')}
                 </span>?
               </p>
-              
+
               <div className="flex justify-end gap-3">
                 <Button
                   variant="ghost"
